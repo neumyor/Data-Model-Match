@@ -1,0 +1,5 @@
+# Local LLM credentials and configuration
+config.llm.json
+
+# Read-only external reference repositories
+_reference_only/
