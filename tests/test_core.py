@@ -89,6 +89,53 @@ class CoreTests(unittest.TestCase):
         with self.assertRaises(MatchError):
             match_models(source, target, client)
 
+    def test_derives_unmatched_fields_locally(self) -> None:
+        source = _document("source", "id", "legacy_code")
+        target = _document("target", "id", "status")
+        client = Mock(spec=LLMClient)
+        client.config = LLMConfig("https://example.com/v1/chat/completions", "secret", "test-model")
+        client.complete_json.return_value = {
+            "matches": [{
+                "source": {"entityId": "entity", "fieldId": "id"},
+                "target": {"entityId": "entity", "fieldId": "id"},
+                "kind": "exact",
+                "confidence": 1,
+                "reason": "Same identifier",
+            }]
+        }
+
+        result = match_models(source, target, client)
+
+        self.assertEqual(result.unmatched_source_fields[0].field_id, "legacy_code")
+        self.assertEqual(result.unmatched_target_fields[0].field_id, "status")
+
+    def test_wraps_duplicate_match_validation_as_match_error(self) -> None:
+        source = _document("source", "id")
+        target = _document("target", "id", "other_id")
+        client = Mock(spec=LLMClient)
+        client.config = LLMConfig("https://example.com/v1/chat/completions", "secret", "test-model")
+        client.complete_json.return_value = {
+            "matches": [
+                {
+                    "source": {"entityId": "entity", "fieldId": "id"},
+                    "target": {"entityId": "entity", "fieldId": "id"},
+                    "kind": "exact",
+                    "confidence": 1,
+                    "reason": "Same identifier",
+                },
+                {
+                    "source": {"entityId": "entity", "fieldId": "id"},
+                    "target": {"entityId": "entity", "fieldId": "other_id"},
+                    "kind": "semantic",
+                    "confidence": 0.5,
+                    "reason": "Duplicate source",
+                },
+            ]
+        }
+
+        with self.assertRaisesRegex(MatchError, "source match endpoints"):
+            match_models(source, target, client)
+
     def test_rejects_invalid_config(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "config.llm.json"

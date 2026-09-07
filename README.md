@@ -9,7 +9,7 @@ The minimal version accepts versioned multi-entity model documents and returns s
 The CLI reads LLM settings from the root `config.llm.json` file. The file is intentionally ignored by Git because it contains a credential.
 
 ```sh
-python3 -m unittest discover -s tests
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python3 -m unittest discover -s tests
 PYTHONPATH=src python3 -m datamodelmatch.cli \
   examples/source_user.json \
   examples/target_customer.json

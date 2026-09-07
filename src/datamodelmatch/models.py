@@ -100,7 +100,7 @@ class ModelDocument:
     description: str = ""
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "version", _non_empty_string(self.version, "Model document version"))
+        object.__setattr__(self, "version", _model_version(self.version))
         object.__setattr__(self, "id", _non_empty_string(self.id, "Model document id"))
         object.__setattr__(self, "name", _non_empty_string(self.name, "Model document name"))
         if not isinstance(self.description, str):
@@ -272,9 +272,15 @@ def _version(value: object) -> str:
         if value != 1:
             raise ModelError("Model document version must be 1")
         return "1"
-    if isinstance(value, str) and value.strip() in {"1", "1.0"}:
-        return value.strip()
+    if isinstance(value, str) and value.strip() == "1":
+        return "1"
     raise ModelError("Model document version must be 1")
+
+
+def _model_version(value: object) -> str:
+    if value == "legacy":
+        return "legacy"
+    return _version(value)
 
 
 def _optional_string(value: object, label: str) -> str:

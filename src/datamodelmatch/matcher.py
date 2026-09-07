@@ -42,14 +42,17 @@ def match_models(
     unmatched_targets = tuple(
         ref for ref in target_fields if ref not in matched_targets
     )
-    return MatchResult(
-        source_model_id=source.id,
-        target_model_id=target.id,
-        matches=matches,
-        unmatched_source_fields=unmatched_sources,
-        unmatched_target_fields=unmatched_targets,
-        meta=MatchMeta(model=client.config.model, attempt_count=1),
-    )
+    try:
+        return MatchResult(
+            source_model_id=source.id,
+            target_model_id=target.id,
+            matches=matches,
+            unmatched_source_fields=unmatched_sources,
+            unmatched_target_fields=unmatched_targets,
+            meta=MatchMeta(model=client.config.model, attempt_count=1),
+        )
+    except ResultValidationError as exc:
+        raise MatchError(str(exc)) from exc
 
 
 def _as_document(model: ModelInput) -> ModelDocument:

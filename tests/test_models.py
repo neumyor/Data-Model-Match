@@ -9,7 +9,7 @@ from datamodelmatch.models import Entity, Field, ModelError, load_model, load_mo
 class ModelDocumentTests(unittest.TestCase):
     def test_loads_versioned_multi_entity_document(self) -> None:
         document = {
-            "version": "1.0",
+            "version": 1,
             "id": "crm",
             "name": "CRM",
             "entities": [
@@ -53,7 +53,7 @@ class ModelDocumentTests(unittest.TestCase):
 
         model = _load_document(document)
 
-        self.assertEqual(model.version, "1.0")
+        self.assertEqual(model.version, "1")
         self.assertEqual(model.entities[0].fields[0].data_type, "uuid")
         self.assertEqual(model.entities[0].fields[0].dataType, "uuid")
         self.assertEqual(model.entities[0].fields[0].type, "uuid")
@@ -71,6 +71,12 @@ class ModelDocumentTests(unittest.TestCase):
         document["entities"][0]["description"] = "  "
 
         with self.assertRaisesRegex(ModelError, "description.*non-empty"):
+            _load_document(document)
+
+        document = _valid_document()
+        document["version"] = 2
+
+        with self.assertRaisesRegex(ModelError, "version must be 1"):
             _load_document(document)
 
     def test_rejects_empty_collections_and_non_boolean_nullable(self) -> None:
@@ -164,7 +170,7 @@ def _load_document(document: dict) -> object:
 
 def _valid_document() -> dict:
     return {
-        "version": "1.0",
+        "version": 1,
         "id": "crm",
         "name": "CRM",
         "entities": [
