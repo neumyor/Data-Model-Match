@@ -5,9 +5,10 @@ from pathlib import Path
 from unittest.mock import Mock
 
 from datamodelmatch.config import ConfigError, load_llm_config
-from datamodelmatch.llm import LLMClient, LLMError
+from datamodelmatch.llm import LLMClient
 from datamodelmatch.matcher import MatchError, match_models
-from datamodelmatch.models import load_model
+from datamodelmatch.models import Entity, Field, ModelDocument, load_model
+from datamodelmatch.config import LLMConfig
 
 
 class CoreTests(unittest.TestCase):
@@ -40,46 +41,49 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(model.fields[0].description, "External user identifier")
 
     def test_validates_match_result(self) -> None:
-        source = _model("source", "user_id", "email")
-        target = _model("target", "id", "email_address")
+        source = _document("source", "user_id", "email")
+        target = _document("target", "id", "email_address")
         client = Mock(spec=LLMClient)
+        client.config = LLMConfig("https://example.com/v1/chat/completions", "secret", "test-model")
         client.complete_json.return_value = {
             "matches": [
                 {
-                    "source_field": "user_id",
-                    "target_field": "id",
+                    "source": {"entityId": "entity", "fieldId": "user_id"},
+                    "target": {"entityId": "entity", "fieldId": "id"},
+                    "kind": "semantic",
                     "confidence": 0.9,
                     "reason": "Both identify the user",
                 },
                 {
-                    "source_field": "email",
-                    "target_field": "email_address",
+                    "source": {"entityId": "entity", "fieldId": "email"},
+                    "target": {"entityId": "entity", "fieldId": "email_address"},
+                    "kind": "exact",
                     "confidence": 1,
                     "reason": "Both contain the email address",
                 },
             ],
-            "unmatched_source_fields": [],
-            "unmatched_target_fields": [],
         }
 
         result = match_models(source, target, client)
 
-        self.assertEqual(result.matches[0].target_field, "id")
+        self.assertEqual(result.matches[0].target.field_id, "id")
+        self.assertEqual(result.unmatched_source_fields, ())
+        self.assertEqual(result.unmatched_target_fields, ())
         self.assertEqual(client.complete_json.call_count, 1)
 
     def test_rejects_unknown_field_in_llm_result(self) -> None:
-        source = _model("source", "user_id")
-        target = _model("target", "id")
+        source = _document("source", "user_id")
+        target = _document("target", "id")
         client = Mock(spec=LLMClient)
+        client.config = LLMConfig("https://example.com/v1/chat/completions", "secret", "test-model")
         client.complete_json.return_value = {
             "matches": [{
-                "source_field": "missing",
-                "target_field": "id",
+                "source": {"entityId": "entity", "fieldId": "missing"},
+                "target": {"entityId": "entity", "fieldId": "id"},
+                "kind": "semantic",
                 "confidence": 0.9,
                 "reason": "invalid",
-            }],
-            "unmatched_source_fields": [],
-            "unmatched_target_fields": [],
+            }]
         }
 
         with self.assertRaises(MatchError):
@@ -102,10 +106,23 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(_parse_content_for_test("```json\n{\"ok\": true}\n```"), {"ok": True})
 
 
-def _model(name: str, *fields: str):
-    from datamodelmatch.models import DataModel, Field
-
-    return DataModel(name, tuple(Field(field, "string") for field in fields))
+def _document(name: str, *fields: str) -> ModelDocument:
+    return ModelDocument(
+        version="1",
+        id=name,
+        name=name,
+        entities=(
+            Entity(
+                id="entity",
+                name="Entity",
+                description="Test entity",
+                fields=tuple(
+                    Field(field, data_type="string", description=f"{field} field")
+                    for field in fields
+                ),
+            ),
+        ),
+    )
 
 
 def _parse_content_for_test(content: str):

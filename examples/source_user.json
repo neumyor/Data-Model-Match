@@ -1,7 +1,43 @@
 {
-  "user_id": "u-1001",
-  "full_name": "Ada Lovelace",
-  "email_address": "ada@example.com",
-  "signup_timestamp": "2026-09-01T10:00:00Z"
+  "version": 1,
+  "id": "crm",
+  "name": "CRM",
+  "description": "Customer relationship model",
+  "entities": [
+    {
+      "id": "customer",
+      "name": "Customer",
+      "description": "Customer master data",
+      "fields": [
+        {
+          "id": "user_id",
+          "name": "userId",
+          "dataType": "string",
+          "nullable": false,
+          "description": "Unique user identifier"
+        },
+        {
+          "id": "full_name",
+          "name": "fullName",
+          "dataType": "string",
+          "nullable": false,
+          "description": "Customer's full name"
+        },
+        {
+          "id": "email_address",
+          "name": "emailAddress",
+          "dataType": "string",
+          "nullable": false,
+          "description": "Customer email address"
+        },
+        {
+          "id": "signup_timestamp",
+          "name": "signupTimestamp",
+          "dataType": "datetime",
+          "nullable": false,
+          "description": "Account signup time"
+        }
+      ]
+    }
+  ]
 }
-

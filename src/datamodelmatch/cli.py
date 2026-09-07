@@ -11,7 +11,7 @@ from typing import List, Optional
 from .config import ConfigError, load_llm_config
 from .llm import LLMClient, LLMError
 from .matcher import MatchError, match_models
-from .models import ModelError, load_model
+from .models import ModelError, load_model_document
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -34,8 +34,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         config = load_llm_config(args.config)
-        source_model = load_model(args.source)
-        target_model = load_model(args.target)
+        source_model = load_model_document(args.source)
+        target_model = load_model_document(args.target)
         result = match_models(source_model, target_model, LLMClient(config, args.timeout))
     except (ConfigError, ModelError, LLMError, MatchError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)

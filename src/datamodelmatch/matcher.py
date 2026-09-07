@@ -1,150 +1,187 @@
-"""LLM-powered data model matching."""
+"""LLM-powered matching between versioned data model documents."""
 
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
-from typing import Any
+from typing import Any, Dict, Iterable, Union
 
-from .llm import LLMClient, LLMError
-from .models import DataModel
+from .llm import LLMClient
+from .models import DataModel, Entity, Field, ModelDocument
+from .results import FieldRef, Match, MatchMeta, MatchResult, ResultValidationError
 
 
 class MatchError(ValueError):
-    """Raised when the LLM result violates the matching result contract."""
+    """Raised when the LLM result violates the matching contract."""
 
 
-@dataclass(frozen=True)
-class FieldMatch:
-    """One source-to-target field mapping."""
-
-    source_field: str
-    target_field: str
-    confidence: float
-    reason: str
-
-
-@dataclass(frozen=True)
-class MatchResult:
-    """Validated model matching result."""
-
-    matches: tuple[FieldMatch, ...]
-    unmatched_source_fields: tuple[str, ...]
-    unmatched_target_fields: tuple[str, ...]
-
-    def to_dict(self) -> dict[str, Any]:
-        """Serialize the result to a JSON-compatible dictionary."""
-        return {
-            "matches": [asdict(item) for item in self.matches],
-            "unmatched_source_fields": list(self.unmatched_source_fields),
-            "unmatched_target_fields": list(self.unmatched_target_fields),
-        }
+ModelInput = Union[ModelDocument, DataModel]
 
 
 def match_models(
-    source_model: DataModel,
-    target_model: DataModel,
+    source_model: ModelInput,
+    target_model: ModelInput,
     client: LLMClient,
 ) -> MatchResult:
-    """Ask the LLM to map source fields to target fields and validate its result."""
-    source_payload = [
-        {"name": field.name, "type": field.type, "description": field.description}
-        for field in source_model.fields
-    ]
-    target_payload = [
-        {"name": field.name, "type": field.type, "description": field.description}
-        for field in target_model.fields
-    ]
-    system_prompt = (
-        "You match fields between data models. Return only one valid JSON object with exactly "
-        "these keys: matches, unmatched_source_fields, unmatched_target_fields. Each match must "
-        "contain source_field, target_field, confidence (number from 0 to 1), and reason. "
-        "A field may appear in at most one match. Do not invent field names."
+    """Ask the LLM for field mappings and derive unmatched fields locally."""
+    source = _as_document(source_model)
+    target = _as_document(target_model)
+    source_fields = _field_index(source)
+    target_fields = _field_index(target)
+    raw_result = client.complete_json(_system_prompt(), _user_prompt(source, target))
+    raw_matches = _raw_matches(raw_result)
+
+    matches = tuple(
+        _parse_match(raw_match, source_fields, target_fields)
+        for raw_match in raw_matches
     )
-    user_prompt = json.dumps(
+    matched_sources = {item.source for item in matches}
+    matched_targets = {item.target for item in matches}
+    unmatched_sources = tuple(
+        ref for ref in source_fields if ref not in matched_sources
+    )
+    unmatched_targets = tuple(
+        ref for ref in target_fields if ref not in matched_targets
+    )
+    return MatchResult(
+        source_model_id=source.id,
+        target_model_id=target.id,
+        matches=matches,
+        unmatched_source_fields=unmatched_sources,
+        unmatched_target_fields=unmatched_targets,
+        meta=MatchMeta(model=client.config.model, attempt_count=1),
+    )
+
+
+def _as_document(model: ModelInput) -> ModelDocument:
+    if isinstance(model, ModelDocument):
+        return model
+    if isinstance(model, DataModel):
+        entity_id = "legacy"
+        fields = tuple(
+            Field(
+                name=field.name,
+                id=field.id,
+                data_type=field.data_type,
+                nullable=field.nullable,
+                description=field.description or f"Legacy field '{field.name}'",
+            )
+            for field in model.fields
+        )
+        return ModelDocument(
+            version="legacy",
+            id=model.name,
+            name=model.name,
+            entities=(
+                Entity(
+                    id=entity_id,
+                    name=model.name,
+                    description=f"Legacy model '{model.name}'",
+                    fields=fields,
+                ),
+            ),
+        )
+    raise MatchError("Model input must be a ModelDocument or DataModel")
+
+
+def _field_index(model: ModelDocument) -> Dict[FieldRef, Field]:
+    return {
+        FieldRef(entity.id, field.id): field
+        for entity in model.entities
+        for field in entity.fields
+    }
+
+
+def _system_prompt() -> str:
+    return (
+        "You match fields between two data models. Return only one JSON object with exactly "
+        "one key: matches. Each match must contain exactly source, target, kind, confidence, "
+        "and reason. source and target must each contain exactly entityId and fieldId. "
+        "kind must be exact, semantic, or transform. confidence must be a number from 0 to 1. "
+        "A source or target field may appear in at most one match. Do not invent references. "
+        "Unmatched fields are calculated by the application and must not be returned."
+    )
+
+
+def _user_prompt(source: ModelDocument, target: ModelDocument) -> str:
+    return json.dumps(
         {
-            "source_model": source_model.name,
-            "source_fields": source_payload,
-            "target_model": target_model.name,
-            "target_fields": target_payload,
+            "sourceModel": _document_payload(source),
+            "targetModel": _document_payload(target),
         },
         ensure_ascii=False,
     )
-    try:
-        raw_result = client.complete_json(system_prompt, user_prompt)
-    except LLMError:
-        raise
-    return _validate_result(raw_result, source_model, target_model)
 
 
-def _validate_result(
-    raw_result: dict[str, Any],
-    source_model: DataModel,
-    target_model: DataModel,
-) -> MatchResult:
-    expected_keys = {
-        "matches",
-        "unmatched_source_fields",
-        "unmatched_target_fields",
+def _document_payload(model: ModelDocument) -> Dict[str, Any]:
+    return {
+        "version": model.version,
+        "id": model.id,
+        "name": model.name,
+        "description": model.description,
+        "entities": [
+            {
+                "id": entity.id,
+                "name": entity.name,
+                "description": entity.description,
+                "fields": [
+                    {
+                        "id": field.id,
+                        "name": field.name,
+                        "dataType": field.data_type,
+                        "nullable": field.nullable,
+                        "description": field.description,
+                    }
+                    for field in entity.fields
+                ],
+            }
+            for entity in model.entities
+        ],
     }
-    if set(raw_result) != expected_keys:
-        raise MatchError(f"LLM result must contain exactly: {sorted(expected_keys)}")
-
-    source_names = {field.name for field in source_model.fields}
-    target_names = {field.name for field in target_model.fields}
-    matches: list[FieldMatch] = []
-    matched_sources: set[str] = set()
-    matched_targets: set[str] = set()
-
-    raw_matches = raw_result["matches"]
-    if not isinstance(raw_matches, list):
-        raise MatchError("'matches' must be an array")
-    for raw_match in raw_matches:
-        if not isinstance(raw_match, dict):
-            raise MatchError("Each match must be an object")
-        source_field = _required_string(raw_match, "source_field")
-        target_field = _required_string(raw_match, "target_field")
-        reason = _required_string(raw_match, "reason")
-        confidence = raw_match.get("confidence")
-        if not isinstance(confidence, (int, float)) or isinstance(confidence, bool):
-            raise MatchError("Match confidence must be a number")
-        if not 0 <= confidence <= 1:
-            raise MatchError("Match confidence must be between 0 and 1")
-        if source_field not in source_names or target_field not in target_names:
-            raise MatchError("LLM result contains a field not present in the input models")
-        if source_field in matched_sources or target_field in matched_targets:
-            raise MatchError("A source or target field may only appear in one match")
-        matched_sources.add(source_field)
-        matched_targets.add(target_field)
-        matches.append(FieldMatch(source_field, target_field, float(confidence), reason))
-
-    unmatched_sources = _validate_unmatched(raw_result["unmatched_source_fields"], source_names, matched_sources)
-    unmatched_targets = _validate_unmatched(raw_result["unmatched_target_fields"], target_names, matched_targets)
-    if set(unmatched_sources) | matched_sources != source_names:
-        raise MatchError("Every source field must be matched or listed as unmatched")
-    if set(unmatched_targets) | matched_targets != target_names:
-        raise MatchError("Every target field must be matched or listed as unmatched")
-
-    return MatchResult(tuple(matches), tuple(unmatched_sources), tuple(unmatched_targets))
 
 
-def _validate_unmatched(
-    value: object,
-    all_names: set[str],
-    matched_names: set[str],
-) -> list[str]:
-    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-        raise MatchError("Unmatched fields must be an array of strings")
-    names = list(value)
-    if len(names) != len(set(names)):
-        raise MatchError("Unmatched fields must not contain duplicates")
-    if any(name not in all_names or name in matched_names for name in names):
-        raise MatchError("Unmatched fields must refer only to unmatched input fields")
-    return names
+def _raw_matches(raw_result: object) -> Iterable[object]:
+    if not isinstance(raw_result, dict) or set(raw_result) != {"matches"}:
+        raise MatchError("LLM result must contain exactly the 'matches' key")
+    matches = raw_result["matches"]
+    if not isinstance(matches, list):
+        raise MatchError("LLM result 'matches' must be an array")
+    return matches
 
 
-def _required_string(raw: dict[str, Any], name: str) -> str:
-    value = raw.get(name)
-    if not isinstance(value, str) or not value.strip():
-        raise MatchError(f"Match field '{name}' must be a non-empty string")
-    return value.strip()
+def _parse_match(
+    raw_match: object,
+    source_fields: Dict[FieldRef, Field],
+    target_fields: Dict[FieldRef, Field],
+) -> Match:
+    if not isinstance(raw_match, dict):
+        raise MatchError("Each LLM match must be an object")
+    if set(raw_match) != {"source", "target", "kind", "confidence", "reason"}:
+        raise MatchError("Each LLM match must contain exactly five required keys")
+    source = _parse_ref(raw_match["source"], "source")
+    target = _parse_ref(raw_match["target"], "target")
+    if source not in source_fields:
+        raise MatchError(f"Unknown source field reference: {source.to_dict()}")
+    if target not in target_fields:
+        raise MatchError(f"Unknown target field reference: {target.to_dict()}")
+    try:
+        return Match(
+            source=source,
+            target=target,
+            kind=raw_match["kind"],
+            confidence=raw_match["confidence"],
+            reason=raw_match["reason"],
+        )
+    except ResultValidationError as exc:
+        raise MatchError(str(exc)) from exc
+
+
+def _parse_ref(value: object, label: str) -> FieldRef:
+    if not isinstance(value, dict) or set(value) != {"entityId", "fieldId"}:
+        raise MatchError(f"{label} must contain exactly entityId and fieldId")
+    entity_id = value["entityId"]
+    field_id = value["fieldId"]
+    if not isinstance(entity_id, str) or not entity_id.strip():
+        raise MatchError(f"{label}.entityId must be a non-empty string")
+    if not isinstance(field_id, str) or not field_id.strip():
+        raise MatchError(f"{label}.fieldId must be a non-empty string")
+    return FieldRef(entity_id.strip(), field_id.strip())

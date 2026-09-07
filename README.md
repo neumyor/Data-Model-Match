@@ -2,6 +2,8 @@
 
 DataModelMatch uses a real OpenAI-compatible LLM endpoint to identify likely field mappings between two JSON data models.
 
+The minimal version accepts versioned multi-entity model documents and returns structured source-to-target field references. See [docs/design.md](docs/design.md) for the input and output contract.
+
 ## Quick start
 
 The CLI reads LLM settings from the root `config.llm.json` file. The file is intentionally ignored by Git because it contains a credential.
@@ -17,20 +19,29 @@ The command prints a validated JSON result:
 
 ```json
 {
+  "sourceModelId": "crm",
+  "targetModelId": "billing",
   "matches": [
     {
-      "source_field": "user_id",
-      "target_field": "id",
+      "source": {"entityId": "customer", "fieldId": "user_id"},
+      "target": {"entityId": "account", "fieldId": "account_id"},
+      "kind": "semantic",
       "confidence": 0.9,
-      "reason": "Both identify the user"
+      "reason": "Both identify the customer"
     }
   ],
-  "unmatched_source_fields": [],
-  "unmatched_target_fields": []
+  "unmatchedSourceFields": [],
+  "unmatchedTargetFields": [
+    {"entityId": "account", "fieldId": "status"}
+  ],
+  "meta": {
+    "model": "glm-5.3-flash",
+    "attemptCount": 1
+  }
 }
 ```
 
-Model files can be ordinary JSON object samples or JSON Schema-style objects with a `properties` object. The LLM result is rejected if it invents fields, duplicates a mapping, uses an invalid confidence, or fails to account for every input field.
+Model files use the versioned multi-entity format described in [docs/design.md](docs/design.md). Legacy JSON object samples and simple JSON Schema objects are still accepted and normalized into a single entity. The LLM result is rejected if it invents fields, duplicates a mapping, uses an invalid match kind or confidence, or returns a malformed field reference. Unmatched fields are calculated by the application.
 
 ## Real acceptance
 
