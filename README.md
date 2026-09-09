@@ -16,28 +16,105 @@ DataModelMatch 将来源不确定的数据集和深度学习模型转成可审�
 
 系统不会执行仓库代码、安装仓库依赖或读取模型权重内容。资源快照默认写入被 Git 忽略的 `.datamodelmatch/`，也可以在设置中切换资源工作区。切换只会改变读取位置，不会自动复制或移动数据集和算法代码库；工作区配置保存在被 Git 忽略的 `config.workspace.json` 中。
 
-## 启动
+## 新电脑部署与演示
 
-LLM 配置只从项目根目录的 `config.llm.json` 读取。该文件包含凭据，必须保持 Git ignored。
+### 1. 安装前置软件
+
+新电脑需要安装：
+
+- Git；
+- Python 3.9 或更高版本；
+- Bun。
+
+### 2. 克隆并安装项目
+
+```sh
+git clone git@github.com:neumyor/Data-Model-Match.git
+cd Data-Model-Match
+
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e .
+
+cd web
+bun install
+```
+
+Windows PowerShell 激活虚拟环境时使用：
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+### 3. 配置 LLM
+
+在项目根目录新建 `config.llm.json`，填入可用的 OpenAI Chat Completions 兼容服务配置：
 
 ```json
 {
   "endpoint": "https://llm-center.modelbest.co/v1/chat/completions",
-  "apiKey": "<本地 API Key>",
+  "apiKey": "<你的 API Key>",
   "model": "glm-5.3-flash",
   "stream": false
 }
 ```
 
-一键构建并启动中文资源工作台：
+该文件包含凭据，已经被 `.gitignore` 忽略，不能提交到 Git。系统不会从环境变量读取默认 LLM 配置。
+
+### 4. 启动 Web 演示
+
+在项目根目录执行：
 
 ```sh
 cd web
-bun install
 bun run start
 ```
 
-打开 `http://localhost:3000`。开发模式使用 `bun run dev`，仅构建使用 `bun run build`。
+`bun run start` 会自动构建前端并启动本地服务。浏览器打开：
+
+```text
+http://localhost:3000
+```
+
+### 5. 运行资源匹配演示
+
+1. 打开“数据集管理”，点击“添加数据集”。
+2. 输入公开 Hugging Face 数据集，例如 `lhoestq/demo1`，搜索后选用并开始解析。
+3. 打开“模型管理”，点击“添加模型”。
+4. 输入公开 GitHub 模型仓库，例如 `openai/CLIP`，开始解析。
+5. 打开“匹配工作台”，选择已经就绪的数据集和模型，点击“开始兼容性分析”。
+6. 查看“智能体执行轨迹”和右侧兼容性报告；分析过程会通过 SSE 持续更新。
+
+首次导入需要访问 Hugging Face 或 GitHub。若只想验证本地匹配 CLI，也可以运行下面的演示：
+
+```sh
+cd ..
+source .venv/bin/activate
+PYTHONPATH=src python -m datamodelmatch.cli \
+  examples/source_user.json \
+  examples/target_customer.json \
+  --config config.llm.json \
+  --timeout 90
+```
+
+该命令会输出结构化字段匹配结果。它同样需要真实 LLM 配置；没有有效 `config.llm.json` 时，命令会明确报错，不会用模拟结果代替。
+
+## 开发命令
+
+开发时可以使用 Bun 的监听模式：
+
+```sh
+cd web
+bun run dev
+```
+
+仅构建前端和服务端产物：
+
+```sh
+cd web
+bun run build
+```
 
 ## 用户流程
 
