@@ -1,41 +1,41 @@
 {
   "version": 1,
   "id": "crm",
-  "name": "CRM",
-  "description": "Customer relationship model",
+  "name": "客户关系",
+  "description": "客户关系主数据模型",
   "entities": [
     {
       "id": "customer",
-      "name": "Customer",
-      "description": "Customer master data",
+      "name": "客户",
+      "description": "客户主数据",
       "fields": [
         {
           "id": "user_id",
-          "name": "userId",
+          "name": "用户标识",
           "dataType": "string",
           "nullable": false,
-          "description": "Unique user identifier"
+          "description": "唯一用户标识"
         },
         {
           "id": "full_name",
-          "name": "fullName",
+          "name": "姓名",
           "dataType": "string",
           "nullable": false,
-          "description": "Customer's full name"
+          "description": "客户姓名"
         },
         {
           "id": "email_address",
-          "name": "emailAddress",
+          "name": "邮箱地址",
           "dataType": "string",
           "nullable": false,
-          "description": "Customer email address"
+          "description": "客户电子邮箱"
         },
         {
           "id": "signup_timestamp",
-          "name": "signupTimestamp",
+          "name": "注册时间",
           "dataType": "datetime",
           "nullable": false,
-          "description": "Account signup time"
+          "description": "账户注册时间"
         }
       ]
     }

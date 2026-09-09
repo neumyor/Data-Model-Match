@@ -5,11 +5,15 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "data-model-match"
 version = "0.1.0"
-description = "Match fields between data models with a real LLM."
+description = "Match datasets with deep-learning models using static analysis and a real LLM."
 requires-python = ">=3.9"
+dependencies = [
+    "pyarrow>=14.0.0",
+]
 
 [project.scripts]
 data-model-match = "datamodelmatch.cli:main"
+data-model-match-resources = "datamodelmatch.resource_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

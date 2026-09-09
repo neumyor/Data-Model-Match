@@ -1,8 +1,9 @@
 import json
 import tempfile
 import unittest
+from io import BytesIO
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from datamodelmatch.config import ConfigError, load_llm_config
 from datamodelmatch.llm import LLMClient
@@ -152,6 +153,76 @@ class CoreTests(unittest.TestCase):
     def test_parses_fenced_json_response(self) -> None:
         self.assertEqual(_parse_content_for_test("```json\n{\"ok\": true}\n```"), {"ok": True})
 
+    @patch("datamodelmatch.llm.urlopen")
+    def test_resolves_logical_model_and_fails_over_between_deployments(self, urlopen) -> None:
+        urlopen.side_effect = [
+            _response({
+                "data": [
+                    {
+                        "id": "GLM_slow",
+                        "modelName": "glm-5.3-flash",
+                        "status": "START",
+                        "supported_protocols": [{"code": "OPENAI_HTTP"}],
+                    },
+                    {
+                        "id": "GLM_healthy",
+                        "root": "glm-5.3-flash",
+                        "status": "START",
+                        "supported_protocols": [{"endpoint": "/v1/chat/completions"}],
+                    },
+                ]
+            }),
+            OSError("response read timed out"),
+            _response({
+                "model": "glm-5.3-flash",
+                "choices": [{"message": {"content": "{\"ok\": true}"}}],
+            }),
+        ]
+        client = LLMClient(
+            LLMConfig(
+                "https://example.com/v1/chat/completions",
+                "secret",
+                "glm-5.3-flash",
+            ),
+            timeout_seconds=60,
+        )
+
+        result = client.complete_json("system", "user")
+
+        self.assertEqual(result, {"ok": True})
+        self.assertEqual(client.last_model, "GLM_healthy")
+        self.assertEqual(client.attempt_count, 2)
+        requested_models = [
+            json.loads(call.args[0].data)["model"]
+            for call in urlopen.call_args_list[1:]
+        ]
+        self.assertEqual(requested_models, ["GLM_slow", "GLM_healthy"])
+
+    @patch("datamodelmatch.llm.urlopen")
+    def test_can_reject_application_invalid_deployment_and_use_next(self, urlopen) -> None:
+        urlopen.side_effect = [
+            _response({
+                "data": [
+                    {"id": "GLM_first", "modelName": "glm-5.3-flash", "status": "START"},
+                    {"id": "GLM_second", "modelName": "glm-5.3-flash", "status": "START"},
+                ]
+            }),
+            _response({"choices": [{"message": {"content": "{\"value\": 1}"}}]}),
+            _response({"choices": [{"message": {"content": "{\"value\": 2}"}}]}),
+        ]
+        client = LLMClient(
+            LLMConfig(
+                "https://example.com/v1/chat/completions",
+                "secret",
+                "glm-5.3-flash",
+            )
+        )
+
+        self.assertEqual(client.complete_json("system", "user"), {"value": 1})
+        client.reject_last_model()
+        self.assertEqual(client.complete_json("system", "user"), {"value": 2})
+        self.assertEqual(client.last_model, "GLM_second")
+
 
 def _document(name: str, *fields: str) -> ModelDocument:
     return ModelDocument(
@@ -176,6 +247,24 @@ def _parse_content_for_test(content: str):
     from datamodelmatch.llm import _parse_json_content
 
     return _parse_json_content(content)
+
+
+class _Response:
+    def __init__(self, value: dict) -> None:
+        self._stream = BytesIO(json.dumps(value).encode("utf-8"))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+    def read(self) -> bytes:
+        return self._stream.read()
+
+
+def _response(value: dict) -> _Response:
+    return _Response(value)
 
 
 if __name__ == "__main__":

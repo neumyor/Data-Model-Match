@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#10251f">
+    <title>数据集与模型匹配 · 资源工作台</title>
+    <link rel="stylesheet" href="/styles.css?v=20260909-workspace-1">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="返回资源工作台">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span><strong>数据集与模型匹配</strong><small>资源工作台</small></span>
+        </a>
+        <div class="top-actions">
+          <span id="serviceStatus" class="service-status"><b></b>检查服务中</span>
+          <button id="openSettings" class="icon-button" type="button" aria-label="打开运行设置" title="运行设置">⚙</button>
+        </div>
+      </header>
+
+      <main class="page">
+        <nav class="main-nav" aria-label="主要界面">
+          <button class="nav-item active" type="button" data-view="datasets"><span class="nav-index">01</span><span><b>数据集管理</b><small>来源、结构与样本</small></span><i>→</i></button>
+          <button class="nav-item" type="button" data-view="models"><span class="nav-index">02</span><span><b>模型管理</b><small>仓库、入口与契约</small></span><i>→</i></button>
+          <button class="nav-item" type="button" data-view="match"><span class="nav-index">03</span><span><b>匹配工作台</b><small>兼容性与转换方案</small></span><i>→</i></button>
+        </nav>
+
+        <section id="view-datasets" class="view active" aria-labelledby="datasets-title">
+          <div class="view-heading">
+            <div><p class="overline">资源库 / 数据集</p><h2 id="datasets-title">数据集管理</h2><p>把原始数据整理成可被模型理解的输入描述。</p></div>
+            <div class="view-actions"><button id="refreshDatasets" class="quiet-button" type="button">↻ 刷新</button><button class="primary-button" type="button" data-add-kind="dataset">＋ 添加数据集</button></div>
+          </div>
+          <div id="datasetSummary" class="summary-strip"></div>
+          <div id="datasetGrid" class="resource-grid" aria-live="polite"></div>
+        </section>
+
+        <section id="view-models" class="view" aria-labelledby="models-title" hidden>
+          <div class="view-heading">
+            <div><p class="overline">资源库 / 深度学习模型</p><h2 id="models-title">模型管理</h2><p>从源码、配置和依赖中提取模型的输入输出契约。</p></div>
+            <div class="view-actions"><button id="refreshModels" class="quiet-button" type="button">↻ 刷新</button><button class="primary-button" type="button" data-add-kind="model">＋ 添加模型</button></div>
+          </div>
+          <div id="modelSummary" class="summary-strip"></div>
+          <div id="modelGrid" class="resource-grid" aria-live="polite"></div>
+        </section>
+
+        <section id="view-match" class="view" aria-labelledby="match-title" hidden>
+          <div class="view-heading">
+            <div><p class="overline">分析 / 数据集 × 模型</p><h2 id="match-title">匹配工作台</h2><p>选择数据集和模型，生成兼容性判断与转换建议。</p></div>
+            <span id="matchStatus" class="status-pill neutral">等待选择资源</span>
+          </div>
+          <div class="match-selectors">
+            <div class="select-card dataset-tint"><div class="select-card-head"><span class="resource-type-dot dataset-dot"></span><span>数据集</span><button class="text-action" type="button" data-view-target="datasets">管理数据集</button></div><select id="datasetSelect" aria-label="选择数据集"><option value="">选择已就绪数据集</option></select><p id="datasetSelectMeta" class="select-meta">需要先导入一个数据集</p></div>
+            <div class="match-arrow" aria-hidden="true">×</div>
+            <div class="select-card model-tint"><div class="select-card-head"><span class="resource-type-dot model-dot"></span><span>深度学习模型</span><button class="text-action" type="button" data-view-target="models">管理模型</button></div><select id="modelSelect" aria-label="选择模型"><option value="">选择已就绪模型</option></select><p id="modelSelectMeta" class="select-meta">需要先导入一个模型</p></div>
+            <button id="runCompatibility" class="primary-button match-button" type="button">开始兼容性分析 <span>→</span></button>
+          </div>
+          <div class="analysis-layout">
+            <section class="trace-panel panel">
+              <div class="panel-heading"><div><p class="overline">分析过程</p><h3>智能体执行轨迹</h3></div><span id="traceCount" class="muted-count">未开始</span></div>
+              <div id="agentActivity" class="agent-activity idle">
+                <div class="agent-activity-mark" aria-hidden="true"><span></span></div>
+                <div class="agent-activity-copy"><strong id="agentActivityTitle">等待开始</strong><p id="agentActivityDetail">选择资源后，智能体会在这里汇报当前阶段。</p></div>
+              </div>
+              <div class="timeline-heading"><span>执行记录</span><span>按阶段整理</span></div>
+              <div id="compatTimeline" class="timeline empty-timeline"><div class="empty-state compact"><span class="empty-symbol">○</span><p>开始分析后，这里会显示资源读取、契约比对和结论生成。</p></div></div>
+            </section>
+            <section class="report-panel panel">
+              <div class="panel-heading"><div><p class="overline">结构化结论</p><h3>兼容性报告</h3></div><span id="reportStatus" class="status-pill neutral">尚未分析</span></div>
+              <div id="reportContent" class="report-empty"><span class="report-glyph">◌</span><p>选择一组已就绪资源开始分析。</p></div>
+            </section>
+          </div>
+        </section>
+      </main>
+      <footer class="footer"><span>数据集与模型匹配</span></footer>
+    </div>
+
+    <div id="backdrop" class="backdrop" hidden></div>
+    <aside id="resourceDrawer" class="drawer" aria-hidden="true" aria-labelledby="resourceDrawerTitle">
+      <div class="drawer-head"><div><p class="overline">资源接入</p><h2 id="resourceDrawerTitle">添加资源</h2></div><button class="drawer-close" type="button" data-close aria-label="关闭">×</button></div>
+      <div class="drawer-content">
+        <div class="kind-switch"><button type="button" class="active" data-drawer-kind="dataset">数据集</button><button type="button" data-drawer-kind="model">模型</button></div>
+        <label class="field-label" for="sourceInput">来源地址、仓库 ID 或本地路径</label>
+        <div class="source-input-row"><input id="sourceInput" type="text" placeholder="例如：glue 或 huggingface.co/datasets/..." autocomplete="off"><button id="searchSource" class="small-button" type="button">搜索</button></div>
+        <p class="field-help">支持 Hugging Face、GitHub 仓库或本机目录。</p>
+        <label class="field-label" for="sourceTypeSelect">来源类型</label>
+        <select id="sourceTypeSelect" class="source-type-select"></select>
+        <div id="searchResults" class="search-results" hidden></div>
+        <details class="advanced-block"><summary>高级导入设置</summary><div class="advanced-fields"><label>固定版本 / 分支<input id="revisionInput" type="text" placeholder="默认使用仓库当前版本"></label><label>下载策略<select id="downloadMode"><option value="sample" selected>抽样下载（推荐）</option><option value="metadata">仅元数据</option><option value="full">完整资源</option></select></label></div></details>
+        <div id="importTrace" class="import-trace" hidden><div class="trace-title"><span>导入进度</span><span id="importProgress">准备中</span></div><div class="progress-track"><span id="importProgressBar"></span></div><div id="importEvents" class="import-events"></div></div>
+      </div>
+      <div class="drawer-foot"><button class="quiet-button" type="button" data-close>取消</button><button id="importResource" class="primary-button" type="button">开始解析</button></div>
+    </aside>
+
+    <aside id="detailDrawer" class="drawer detail-drawer" aria-hidden="true" aria-labelledby="detailTitle">
+      <div class="drawer-head"><div><p class="overline">资源详情</p><h2 id="detailTitle">资源概览</h2></div><button class="drawer-close" type="button" data-close aria-label="关闭">×</button></div>
+      <div id="detailContent" class="drawer-content detail-content"></div>
+      <div class="drawer-foot"><button id="deleteResource" class="danger-button" type="button">删除资源</button><button class="quiet-button" type="button" data-close>关闭</button></div>
+    </aside>
+
+    <aside id="settingsDrawer" class="drawer settings-drawer" aria-hidden="true" aria-labelledby="settingsTitle">
+      <div class="drawer-head"><div><p class="overline">运行环境</p><h2 id="settingsTitle">设置</h2></div><button class="drawer-close" type="button" data-close aria-label="关闭">×</button></div>
+      <div class="drawer-content">
+        <section class="settings-section">
+          <div class="settings-section-heading"><div><p class="overline">资源位置</p><h3>资源工作区</h3></div><span id="workspaceState" class="status-pill neutral">读取中</span></div>
+          <p class="settings-description">数据集快照和算法代码库都从这个工作区读取。</p>
+          <label class="field-label" for="workspacePathInput">工作区根目录</label>
+          <div class="workspace-path-row"><input id="workspacePathInput" class="workspace-path-input" type="text" autocomplete="off" spellcheck="false"><button id="saveWorkspacePath" class="small-button" type="button">应用</button></div>
+          <div id="workspacePathWarning" class="workspace-warning" role="note">切换路径只会改变读取位置，不会复制或移动已有数据。</div>
+          <div class="workspace-locations">
+            <div class="setting-line"><span>数据集目录</span><strong id="workspaceDatasetPath">—</strong></div>
+            <div class="setting-line"><span>算法代码库目录</span><strong id="workspaceModelPath">—</strong></div>
+          </div>
+        </section>
+        <section class="settings-section">
+          <div class="settings-section-heading"><div><p class="overline">智能体服务</p><h3>LLM 配置</h3></div></div>
+          <div class="setting-line"><span>配置状态</span><strong id="configState">检查中</strong></div>
+          <div class="setting-line"><span>当前模型</span><strong id="configModel">—</strong></div>
+          <div class="setting-line"><span>服务地址</span><strong id="configEndpoint">—</strong></div>
+        </section>
+        <details class="advanced-block"><summary>高级运行参数</summary><label>请求超时<select id="timeoutSetting"><option value="60000">60 秒</option><option value="90000" selected>90 秒</option><option value="180000">180 秒</option></select></label></details>
+      </div>
+    </aside>
+    <aside id="transformDrawer" class="drawer transform-drawer" aria-hidden="true" aria-labelledby="transformTitle">
+      <div class="drawer-head"><div><p class="overline">数据集适配</p><h2 id="transformTitle">生成适配数据集</h2></div><button class="drawer-close" type="button" data-close aria-label="关闭">×</button></div>
+      <div class="drawer-content">
+        <div class="transform-summary"><div><span>来源数据集</span><strong id="transformDatasetName">—</strong></div><div class="transform-arrow">→</div><div><span>适配模型</span><strong id="transformModelName">—</strong></div></div>
+        <div id="transformState" class="transform-state"><span class="transform-spinner"></span><div><strong id="transformStatus">准备生成</strong><p id="transformDescription">系统会根据兼容性报告生成新的数据集。</p></div></div>
+        <div class="transform-progress"><div class="progress-track"><span id="transformProgressBar"></span></div><div><span>处理进度</span><strong id="transformProgress">准备中</strong></div></div>
+        <div class="transform-events"><div class="trace-title"><span>执行记录</span><span id="transformEventCount">0 条</span></div><div id="transformEventList" class="import-events"></div></div>
+      </div>
+      <div class="drawer-foot"><button id="transformClose" class="quiet-button" type="button" data-close>关闭</button><button id="transformRetry" class="primary-button" type="button" hidden>重新生成</button></div>
+    </aside>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script defer src="/app.js?v=20260909-workspace-1"></script>
+  </body>
+</html>

@@ -49,7 +49,14 @@ def match_models(
             matches=matches,
             unmatched_source_fields=unmatched_sources,
             unmatched_target_fields=unmatched_targets,
-            meta=MatchMeta(model=client.config.model, attempt_count=1),
+            meta=MatchMeta(
+                model=client.config.model,
+                attempt_count=(
+                    client.attempt_count
+                    if isinstance(getattr(client, "attempt_count", None), int)
+                    else 1
+                ),
+            ),
         )
     except ResultValidationError as exc:
         raise MatchError(str(exc)) from exc

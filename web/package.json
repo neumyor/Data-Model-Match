@@ -1,0 +1,14 @@
+{
+  "name": "data-model-match-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run build && bun --watch server.ts",
+    "start": "bun run build && bun server.ts",
+    "build": "bun run build:client && bun build ./server.ts --outdir ./dist-server --target bun --minify",
+    "build:client": "bun build.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

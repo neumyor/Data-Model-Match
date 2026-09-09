@@ -1,48 +1,48 @@
 {
   "version": 1,
   "id": "billing",
-  "name": "Billing",
-  "description": "Billing account model",
+  "name": "计费账户",
+  "description": "计费账户模型",
   "entities": [
     {
       "id": "account",
-      "name": "Account",
-      "description": "Billable customer account",
+      "name": "账户",
+      "description": "可计费客户账户",
       "fields": [
         {
           "id": "account_id",
-          "name": "accountId",
+          "name": "账户标识",
           "dataType": "string",
           "nullable": false,
-          "description": "Unique billing account identifier"
+          "description": "唯一计费账户标识"
         },
         {
           "id": "name",
-          "name": "name",
+          "name": "账户名称",
           "dataType": "string",
           "nullable": false,
-          "description": "Account holder name"
+          "description": "账户持有人姓名"
         },
         {
           "id": "email",
-          "name": "email",
+          "name": "邮箱",
           "dataType": "string",
           "nullable": false,
-          "description": "Account email address"
+          "description": "账户电子邮箱"
         },
         {
           "id": "created_at",
-          "name": "createdAt",
+          "name": "创建时间",
           "dataType": "datetime",
           "nullable": false,
-          "description": "Account creation time"
+          "description": "账户创建时间"
         },
         {
           "id": "status",
-          "name": "status",
+          "name": "状态",
           "dataType": "string",
           "nullable": false,
-          "description": "Current account status"
+          "description": "当前账户状态"
         }
       ]
     }
