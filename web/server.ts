@@ -1,5 +1,6 @@
-import { basename, join, normalize, resolve } from "node:path";
-import { mkdir, rm, stat } from "node:fs/promises";
+import { basename, dirname, join, normalize, resolve } from "node:path";
+import { mkdir, mkdtemp, rm, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
 
 type JsonObject = Record<string, unknown>;
 
@@ -20,6 +21,9 @@ const configPath = join(projectRoot, "config.llm.json");
 const workspaceConfigPath = join(projectRoot, "config.workspace.json");
 const defaultResourceStorePath = join(projectRoot, ".datamodelmatch");
 const maxBodyBytes = 5 * 1024 * 1024;
+const defaultResourceMaxBytes = 500 * 1024 * 1024;
+const maxLocalUploadFiles = 10_000;
+const maxLocalUploadBodyBytes = defaultResourceMaxBytes + 16 * 1024 * 1024;
 const defaultTimeoutMs = 90_000;
 const maxTimeoutMs = 180_000;
 let configuredApiKey = "";
@@ -262,6 +266,122 @@ function resourceCommand(args: string[]): string[] {
   ];
 }
 
+function uploadText(form: FormData, name: string): string {
+  const value = form.get(name);
+  if (typeof value !== "string") {
+    throw new RequestError("INVALID_LOCAL_UPLOAD", `本地导入缺少 ${name} 字段`, 400);
+  }
+  return value;
+}
+
+function safeUploadSegment(value: string): string {
+  const segment = value.trim();
+  if (!segment || segment === "." || segment === ".." || /[\\/\0]/.test(segment)) {
+    throw new RequestError("INVALID_LOCAL_UPLOAD", "所选文件夹名称无效", 400);
+  }
+  return segment;
+}
+
+function safeUploadPath(value: unknown): string {
+  if (typeof value !== "string" || !value) {
+    throw new RequestError("INVALID_LOCAL_UPLOAD", "所选文件包含无效路径", 400);
+  }
+  const parts = value.replace(/\\/g, "/").split("/");
+  if (parts.some((part) => !part || part === "." || part === ".." || part.includes("\0"))) {
+    throw new RequestError("INVALID_LOCAL_UPLOAD", "所选文件包含不安全路径", 400);
+  }
+  return parts.join("/");
+}
+
+type LocalUpload = {
+  kind: "dataset" | "model";
+  downloadMode: "metadata" | "sample" | "full";
+  sourcePath: string;
+  cleanupPath: string;
+};
+
+async function stageLocalUpload(request: Request): Promise<LocalUpload> {
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (Number.isFinite(contentLength) && contentLength > maxLocalUploadBodyBytes) {
+    throw new RequestError("PAYLOAD_TOO_LARGE", "本地导入内容不能超过 500 MB", 413);
+  }
+
+  const form = await request.formData();
+  const kindValue = uploadText(form, "kind");
+  const downloadModeValue = uploadText(form, "downloadMode");
+  if (kindValue !== "dataset" && kindValue !== "model") {
+    throw new RequestError("INVALID_INPUT", "资源类型必须是 dataset 或 model", 400);
+  }
+  if (!["metadata", "sample", "full"].includes(downloadModeValue)) {
+    throw new RequestError("INVALID_DOWNLOAD_MODE", "下载模式无效", 400);
+  }
+
+  const sourceName = safeUploadSegment(uploadText(form, "sourceName"));
+  let manifest: unknown;
+  try {
+    manifest = JSON.parse(uploadText(form, "manifest"));
+  } catch {
+    throw new RequestError("INVALID_LOCAL_UPLOAD", "本地文件清单格式无效", 400);
+  }
+  if (!Array.isArray(manifest) || manifest.length < 1 || manifest.length > maxLocalUploadFiles) {
+    throw new RequestError("INVALID_LOCAL_UPLOAD", "请选择不超过 10000 个文件的本地文件夹", 400);
+  }
+
+  const files = form.getAll("files");
+  if (files.length !== manifest.length || files.some((item) => typeof item === "string")) {
+    throw new RequestError("INVALID_LOCAL_UPLOAD", "本地文件与清单不一致", 400);
+  }
+
+  const stagedFiles: Array<{ file: File; relativePath: string }> = [];
+  const seenPaths = new Set<string>();
+  let totalBytes = 0;
+  for (let index = 0; index < manifest.length; index += 1) {
+    const entry = manifest[index];
+    if (!isObject(entry)) {
+      throw new RequestError("INVALID_LOCAL_UPLOAD", "本地文件清单格式无效", 400);
+    }
+    const relativePath = safeUploadPath(entry.path);
+    if (seenPaths.has(relativePath)) {
+      throw new RequestError("INVALID_LOCAL_UPLOAD", "本地文件清单包含重复路径", 400);
+    }
+    seenPaths.add(relativePath);
+    const file = files[index] as File;
+    if (typeof entry.size !== "number" || !Number.isFinite(entry.size) || entry.size !== file.size) {
+      throw new RequestError("INVALID_LOCAL_UPLOAD", "本地文件大小校验失败", 400);
+    }
+    totalBytes += file.size;
+    if (totalBytes > defaultResourceMaxBytes) {
+      throw new RequestError("PAYLOAD_TOO_LARGE", "本地导入内容不能超过 500 MB", 413);
+    }
+    stagedFiles.push({ file, relativePath });
+  }
+
+  const cleanupPath = await mkdtemp(join(tmpdir(), "datamodelmatch-upload-"));
+  const sourcePath = join(cleanupPath, sourceName);
+  try {
+    for (const { file, relativePath } of stagedFiles) {
+      const target = join(sourcePath, relativePath);
+      if (target !== sourcePath && !target.startsWith(`${sourcePath}/`)) {
+        throw new RequestError("INVALID_LOCAL_UPLOAD", "所选文件包含不安全路径", 400);
+      }
+      await mkdir(dirname(target), { recursive: true });
+      const written = await Bun.write(target, file);
+      if (written !== file.size) {
+        throw new Error("本地文件暂存不完整");
+      }
+    }
+  } catch (error) {
+    await rm(cleanupPath, { recursive: true, force: true });
+    throw error;
+  }
+  return {
+    kind: kindValue,
+    downloadMode: downloadModeValue,
+    sourcePath,
+    cleanupPath,
+  };
+}
+
 async function runResourceJson(args: string[]): Promise<JsonObject> {
   const child = Bun.spawn(resourceCommand(args), {
     cwd: projectRoot,
@@ -344,7 +464,7 @@ function runResourceStream(args: string[], cleanupPath?: string): Response {
         }
       } finally {
         if (cleanupPath) {
-          await rm(cleanupPath, { force: true });
+          await rm(cleanupPath, { recursive: true, force: true });
         }
         if (!closed) {
           closed = true;
@@ -743,7 +863,7 @@ const server = Bun.serve({
           : "sample";
         const maxBytes = typeof body.maxBytes === "number"
           ? Math.floor(body.maxBytes)
-          : 50 * 1024 * 1024;
+          : defaultResourceMaxBytes;
         if (!["dataset", "model"].includes(kind) || !sourceType || !source) {
           throw new RequestError(
             "INVALID_INPUT",
@@ -754,7 +874,7 @@ const server = Bun.serve({
         if (!["metadata", "sample", "full"].includes(downloadMode)) {
           throw new RequestError("INVALID_DOWNLOAD_MODE", "下载模式无效", 400);
         }
-        if (maxBytes < 1 || maxBytes > 500 * 1024 * 1024) {
+        if (maxBytes < 1 || maxBytes > defaultResourceMaxBytes) {
           throw new RequestError("INVALID_SIZE_LIMIT", "下载上限必须在 1 字节到 500 MB 之间", 400);
         }
         return runResourceStream([
@@ -774,6 +894,30 @@ const server = Bun.serve({
           return errorResponse(error.code, error.message, error.status);
         }
         return errorResponse("IMPORT_FAILED", toSafeMessage(error), 500);
+      }
+    }
+
+    if (url.pathname === "/api/resources/import-local") {
+      if (request.method !== "POST") {
+        return errorResponse("METHOD_NOT_ALLOWED", "该接口只支持 POST 请求", 405);
+      }
+      try {
+        const upload = await stageLocalUpload(request);
+        return runResourceStream([
+          "import",
+          upload.kind,
+          "local",
+          upload.sourcePath,
+          "--download-mode",
+          upload.downloadMode,
+          "--max-bytes",
+          String(defaultResourceMaxBytes),
+        ], upload.cleanupPath);
+      } catch (error) {
+        if (error instanceof RequestError) {
+          return errorResponse(error.code, error.message, error.status);
+        }
+        return errorResponse("LOCAL_UPLOAD_FAILED", toSafeMessage(error), 500);
       }
     }
 
@@ -867,6 +1011,12 @@ const server = Bun.serve({
             datasetId,
             modelId,
             reportPath,
+            "--config",
+            configPath,
+            "--timeout",
+            "90",
+            "--max-attempts",
+            "3",
           ],
           reportPath,
         );

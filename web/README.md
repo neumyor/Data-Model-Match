@@ -12,8 +12,8 @@ bun run start
 
 ## 页面
 
-- 数据集管理：搜索、导入、查看和删除 Hugging Face 或本地数据集。
-- 模型管理：搜索、导入、查看和删除 GitHub 或本地模型。
+- 数据集管理：搜索、导入、查看和删除 Hugging Face 或本地数据集；本地导入通过文件夹选择器完成。
+- 模型管理：搜索、导入、查看和删除 GitHub 或本地模型；本地导入通过文件夹选择器完成。
 - 匹配工作台：选择已就绪资源，通过 SSE 查看执行轨迹和兼容性报告。
 - 设置抽屉：查看脱敏后的 `config.llm.json` 配置状态，以及当前资源工作区、数据集目录和算法代码库目录。
 
@@ -33,6 +33,7 @@ bun run start
 | `GET` | `/api/resources?kind=` | 返回资源记录及完整 profile |
 | `GET` | `/api/resources/:id` | 返回单个资源详情 |
 | `POST` | `/api/resources/import` | 导入资源，响应为 SSE |
+| `POST` | `/api/resources/import-local` | 接收选择的本地文件夹并导入，响应为 SSE |
 | `DELETE` | `/api/resources/:id` | 删除资源快照和 profile |
 | `POST` | `/api/compatibility` | 分析数据集与模型兼容性，响应为 SSE |
 | `POST` | `/api/match` | 兼容旧版 JSON 数据模型字段匹配 |
@@ -46,7 +47,7 @@ bun run start
   "source": "lhoestq/demo1",
   "revision": "main",
   "downloadMode": "sample",
-  "maxBytes": 52428800
+  "maxBytes": 524288000
 }
 ```
 
@@ -67,7 +68,7 @@ SSE 事件包括 `stage`、`progress`、`evidence`、`warning`、`result`、`err
 ## 安全边界
 
 - 服务端只从项目根目录 `config.llm.json` 读取 LLM 凭据。
-- 本地导入拒绝项目根目录、用户主目录、`.git`、`_reference_only` 和 `.datamodelmatch`。
+- 浏览器本地导入仅接收用户在文件夹选择器中选定的文件；服务端会校验相对路径、重复项、文件数和 500 MB 总量，并在系统临时目录中暂存，解析完成后删除副本。
 - 导入时跳过符号链接、常见凭据文件、模型权重和超限文件。
 - GitHub 抽样模式通过官方 Tree/Blob API 拉取固定 commit 的少量源码；完整模式使用固定 commit 归档。
 - 远程或本地仓库代码都不会被执行。

@@ -85,6 +85,40 @@ class DatasetResourceTests(unittest.TestCase):
             self.assertEqual(events[0][0], "stage")
             self.assertEqual(events[-1][0], "result")
 
+    def test_recognizes_cvat_tracking_images_and_boxes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            images = source / "images"
+            overlays = source / "boxes"
+            images.mkdir(parents=True)
+            overlays.mkdir()
+            for name in ("frame_000000.PNG", "frame_000001.PNG"):
+                (images / name).write_bytes(b"png")
+            (overlays / "frame_000000.PNG").write_bytes(b"overlay")
+            (source / "annotations.xml").write_text(
+                """<annotations><meta><task><original_size><width>1280</width><height>720</height></original_size></task></meta>
+                <track id=\"7\" label=\"person\"><box frame=\"0\" outside=\"0\" xtl=\"1\" ytl=\"2\" xbr=\"30\" ybr=\"60\" />
+                <box frame=\"1\" outside=\"1\" xtl=\"1\" ytl=\"2\" xbr=\"30\" ybr=\"60\" /></track></annotations>""",
+                encoding="utf-8",
+            )
+            record, profile = import_dataset(
+                "local", str(source), "local", root / "target",
+                "dataset_cvat", "full", 1024 * 1024,
+            )
+
+        features = {item["name"]: item for item in profile["features"]}
+        self.assertEqual(record.status, "ready")
+        self.assertEqual(profile["formats"], ["cvat-xml"])
+        self.assertEqual(profile["modalities"], ["image"])
+        self.assertEqual(profile["taskHints"], ["object-detection", "object-tracking"])
+        self.assertEqual(profile["sampleCount"], 2)
+        self.assertEqual(profile["splits"], [{"name": "unknown", "rowCount": 2}])
+        self.assertEqual(features["image"]["shape"], [720, 1280, 3])
+        self.assertEqual(features["boxes"]["shape"], ["variable", 4])
+        self.assertIn("person", features["labels"]["description"])
+        self.assertFalse(any("没有可用于静态分析" in warning for warning in profile["warnings"]))
+
     def test_json_and_invalid_parquet_are_safely_inspected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

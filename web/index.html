@@ -81,9 +81,17 @@
       <div class="drawer-head"><div><p class="overline">资源接入</p><h2 id="resourceDrawerTitle">添加资源</h2></div><button class="drawer-close" type="button" data-close aria-label="关闭">×</button></div>
       <div class="drawer-content">
         <div class="kind-switch"><button type="button" class="active" data-drawer-kind="dataset">数据集</button><button type="button" data-drawer-kind="model">模型</button></div>
-        <label class="field-label" for="sourceInput">来源地址、仓库 ID 或本地路径</label>
-        <div class="source-input-row"><input id="sourceInput" type="text" placeholder="例如：glue 或 huggingface.co/datasets/..." autocomplete="off"><button id="searchSource" class="small-button" type="button">搜索</button></div>
-        <p class="field-help">支持 Hugging Face、GitHub 仓库或本机目录。</p>
+        <div id="remoteSourceFields">
+          <label class="field-label" for="sourceInput">来源地址或仓库 ID</label>
+          <div class="source-input-row"><input id="sourceInput" type="text" placeholder="例如：glue 或 huggingface.co/datasets/..." autocomplete="off"><button id="searchSource" class="small-button" type="button">搜索</button></div>
+          <p class="field-help">用于 Hugging Face 或 GitHub 等远程来源。</p>
+        </div>
+        <div id="localSourceFields" hidden>
+          <label class="field-label" for="localFolderInput">本地文件夹</label>
+          <input id="localFolderInput" type="file" webkitdirectory directory multiple hidden>
+          <div class="local-folder-row"><button id="chooseLocalFolder" class="small-button" type="button">选择文件夹</button><span id="localFolderSummary">尚未选择文件夹</span></div>
+          <p class="field-help">所选文件会先传给本机服务进行静态解析，单次最多 500 MB；不会执行其中的代码。</p>
+        </div>
         <label class="field-label" for="sourceTypeSelect">来源类型</label>
         <select id="sourceTypeSelect" class="source-type-select"></select>
         <div id="searchResults" class="search-results" hidden></div>

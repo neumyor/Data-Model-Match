@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 from datamodelmatch.dataset_transform import DatasetTransformError, transform_dataset
 from datamodelmatch.resource_store import ResourceStore
@@ -9,6 +10,80 @@ from datamodelmatch.resource_types import ResourceRecord
 
 
 class DatasetTransformTests(unittest.TestCase):
+    def test_agent_plan_is_rechecked_before_the_resource_is_registered(self) -> None:
+        class Planner:
+            config = SimpleNamespace(model="test-planner")
+            last_model = "test-planner"
+            attempt_count = 1
+
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def complete_json(self, _system: str, _user: str) -> dict:
+                self.calls += 1
+                if self.calls == 1:
+                    return {
+                        "summary": "将 image_path 映射为 image。",
+                        "fieldMappings": [{
+                            "datasetField": "image_path", "modelField": "image",
+                            "kind": "semantic", "confidence": 1, "reason": "同一输入。",
+                        }],
+                        "operations": [],
+                        "warnings": [],
+                    }
+                return {"summary": "复检补充。", "fieldMappings": [], "transforms": [], "warnings": []}
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            store = ResourceStore(root / ".datamodelmatch")
+            store.ensure()
+            source = store.root / "resources" / "datasets" / "dataset_source"
+            source.mkdir(parents=True)
+            (source / "data.csv").write_text("image_path,label\na.png,cat\n", encoding="utf-8")
+            self._save_dataset(store, "dataset_source", source, ["image_path", "label"])
+            self._save_model(store, "model_target", "Vision model")
+            planner = Planner()
+
+            record, profile = transform_dataset(
+                store, "dataset_source", "model_target",
+                {"status": "adaptable", "fieldMappings": [{"datasetField": "image_path", "modelField": "image"}]},
+                store.root / "resources" / "datasets" / "dataset_adapted", "dataset_adapted", client=planner,
+            )
+
+            self.assertEqual(planner.calls, 2)
+            self.assertEqual(record.status, "ready")
+            self.assertEqual(profile["verification"]["status"], "compatible")
+            self.assertTrue(profile["transform"]["verified"])
+
+    def test_invalid_agent_plan_never_creates_a_derived_resource(self) -> None:
+        class InvalidPlanner:
+            config = SimpleNamespace(model="test-planner")
+            last_model = "test-planner"
+            attempt_count = 1
+
+            def complete_json(self, _system: str, _user: str) -> dict:
+                return {"summary": "bad", "fieldMappings": [], "operations": [], "warnings": []}
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            store = ResourceStore(root / ".datamodelmatch")
+            store.ensure()
+            source = store.root / "resources" / "datasets" / "dataset_source"
+            source.mkdir(parents=True)
+            (source / "data.csv").write_text("image_path\na.png\n", encoding="utf-8")
+            self._save_dataset(store, "dataset_source", source, ["image_path"])
+            self._save_model(store, "model_target", "Vision model")
+            target = store.root / "resources" / "datasets" / "dataset_adapted"
+
+            with self.assertRaisesRegex(DatasetTransformError, "未覆盖模型必需字段"):
+                transform_dataset(
+                    store, "dataset_source", "model_target", {"status": "adaptable", "fieldMappings": []},
+                    target, "dataset_adapted", client=InvalidPlanner(),
+                )
+            self.assertFalse(target.exists())
+            with self.assertRaises(KeyError):
+                store.get("dataset_adapted")
+
     def test_transforms_csv_and_jsonl_without_mutating_source(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -80,12 +155,13 @@ class DatasetTransformTests(unittest.TestCase):
                     "sourceDatasetName": "Source dataset",
                     "targetModelId": "model_target",
                     "targetModelName": "Vision model",
-                    "transformStatus": "completed",
+                    "transformStatus": "verified",
                 },
             )
             manifest = json.loads((target / "datamodelmatch-transform.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["provenance"], record.provenance)
-            self.assertEqual(manifest["transformedFiles"], 2)
+            self.assertEqual(manifest["kind"], "contract-adapter")
+            self.assertEqual(profile["verification"]["status"], "compatible")
             self.assertEqual([name for name, _ in events[:2]], ["stage", "stage"])
             self.assertEqual(events[-1][0], "stage")
             self.assertEqual(events[-1][1]["name"], "complete")
@@ -148,12 +224,12 @@ class DatasetTransformTests(unittest.TestCase):
                     "model_target",
                     {
                         "status": "adaptable",
-                        "fieldMappings": [{"datasetField": "value", "modelField": "input"}],
+                        "fieldMappings": [{"datasetField": "value", "modelField": "image"}],
                     },
                     root / "adapted",
                     "dataset_adapted",
                 )
-            with self.assertRaisesRegex(DatasetTransformError, "没有可执行的字段映射"):
+            with self.assertRaisesRegex(DatasetTransformError, "未覆盖模型必需字段"):
                 transform_dataset(
                     store,
                     "dataset_source",
@@ -178,7 +254,7 @@ class DatasetTransformTests(unittest.TestCase):
                     "model_target",
                     {
                         "status": "compatible",
-                        "fieldMappings": [{"datasetField": "value", "modelField": "input"}],
+                        "fieldMappings": [{"datasetField": "value", "modelField": "image"}],
                     },
                     root / "adapted",
                     "dataset_adapted",
@@ -202,7 +278,7 @@ class DatasetTransformTests(unittest.TestCase):
                     "model_target",
                     {
                         "status": "adaptable",
-                        "fieldMappings": [{"datasetField": "value", "modelField": "input"}],
+                        "fieldMappings": [{"datasetField": "value", "modelField": "image"}],
                     },
                     root / "adapted",
                     "dataset_adapted",
@@ -235,7 +311,19 @@ class DatasetTransformTests(unittest.TestCase):
             {
                 "resourceId": resource_id,
                 "name": "Source dataset",
-                "features": [{"name": name, "dataType": "string"} for name in feature_names],
+                "modalities": ["text"],
+                "taskHints": ["text-classification"],
+                "license": "MIT",
+                "features": [
+                    {
+                        "name": name,
+                        "dataType": "string",
+                        "semanticRole": "label" if name == "label" else "input",
+                        "nullable": False,
+                        "shape": [],
+                    }
+                    for name in feature_names
+                ],
             },
         )
 
@@ -258,7 +346,32 @@ class DatasetTransformTests(unittest.TestCase):
                 created_at="2026-09-08T00:00:00Z",
                 updated_at="2026-09-08T00:00:00Z",
             ),
-            {"resourceId": resource_id, "name": name},
+            {
+                "resourceId": resource_id,
+                "name": name,
+                "tasks": ["text-classification"],
+                "frameworks": ["test"],
+                "license": "MIT",
+                "inputContract": {
+                    "modalities": ["text"],
+                    "fields": [
+                        {
+                            "name": "image",
+                            "dataType": "string",
+                            "shape": [],
+                            "required": True,
+                        },
+                        {
+                            "name": "target",
+                            "dataType": "string",
+                            "shape": [],
+                            "required": False,
+                        },
+                    ],
+                    "preprocessing": [],
+                    "constraints": [],
+                },
+            },
         )
 
 

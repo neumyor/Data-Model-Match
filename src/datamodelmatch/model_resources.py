@@ -35,7 +35,7 @@ from .resource_types import (
 GITHUB_API = "https://api.github.com"
 GITHUB_WEB = "https://github.com"
 GITHUB_CODELOAD = "https://codeload.github.com"
-DEFAULT_MAX_BYTES = 50 * 1024 * 1024
+DEFAULT_MAX_BYTES = 500 * 1024 * 1024
 TEXT_FILE_LIMIT = 512 * 1024
 GITHUB_SAMPLE_FILE_LIMIT = 12
 WEIGHT_SUFFIXES = {

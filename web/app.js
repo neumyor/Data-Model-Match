@@ -303,22 +303,17 @@
   function openResourceDrawer(kind) {
     state.drawerKind = kind;
     $("resourceDrawerTitle").textContent = "添加" + labels[kind].title;
-    $("sourceInput").value = ""; $("revisionInput").value = ""; $("searchResults").hidden = true; $("searchResults").innerHTML = ""; $("importTrace").hidden = true;
+    $("sourceInput").value = ""; $("revisionInput").value = ""; $("searchResults").hidden = true; $("searchResults").innerHTML = ""; $("importTrace").hidden = true; resetLocalFolderSelection();
     all("[data-drawer-kind]").forEach(function (button) { button.classList.toggle("active", button.dataset.drawerKind === kind); });
     configureSourceType(kind);
     openDrawer("resourceDrawer");
-    setTimeout(function () { $("sourceInput").focus(); }, 280);
+    setTimeout(function () { if (!$("remoteSourceFields").hidden) $("sourceInput").focus(); }, 280);
   }
 
   async function searchSource() {
     var query = $("sourceInput").value.trim();
     if (!query) { showToast("请先输入来源地址、仓库 ID 或关键词"); return; }
     var kind = state.drawerKind, selectedType = $("sourceTypeSelect").value;
-    if (selectedType === "local") {
-      $("searchResults").hidden = false;
-      $("searchResults").innerHTML = '<div class="field-help">本地目录无需联网搜索，确认路径后可直接开始解析。</div>';
-      return;
-    }
     var endpoint = kind === "dataset" ? "/api/search/datasets?q=" : "/api/search/models?q=";
     $("searchResults").hidden = false;
     $("searchResults").innerHTML = '<div class="loading-card"><div><span></span>正在搜索候选来源</div></div>';
@@ -371,28 +366,76 @@
   function configureSourceType(kind) {
     var select = $("sourceTypeSelect");
     select.innerHTML = kind === "dataset"
-      ? '<option value="auto">自动识别</option><option value="huggingface">Hugging Face 仓库</option><option value="local">本地目录</option>'
-      : '<option value="auto">自动识别</option><option value="github">GitHub 仓库</option><option value="local">本地目录</option>';
+      ? '<option value="auto">自动识别（远程）</option><option value="huggingface">Hugging Face 仓库</option><option value="local">本地文件夹</option>'
+      : '<option value="auto">自动识别（远程）</option><option value="github">GitHub 仓库</option><option value="local">本地文件夹</option>';
     $("sourceInput").placeholder = kind === "dataset"
-      ? "例如：lhoestq/demo1 或 /本地/数据目录"
-      : "例如：karpathy/minGPT 或 /本地/模型目录";
+      ? "例如：lhoestq/demo1 或 huggingface.co/datasets/..."
+      : "例如：karpathy/minGPT 或 github.com/...";
+    syncSourceFields();
+  }
+  function resetLocalFolderSelection() {
+    $("localFolderInput").value = "";
+    $("localFolderSummary").textContent = "尚未选择文件夹";
+  }
+  function updateLocalFolderSummary() {
+    var files = Array.prototype.slice.call($("localFolderInput").files || []);
+    if (!files.length) { $("localFolderSummary").textContent = "尚未选择文件夹"; return; }
+    var total = files.reduce(function (sum, file) { return sum + Number(file.size || 0); }, 0);
+    var root = (files[0].webkitRelativePath || files[0].name).split(/[\\/]/)[0] || "已选文件夹";
+    $("localFolderSummary").textContent = root + " · " + files.length + " 个文件 · " + formatBytes(total);
+  }
+  function syncSourceFields() {
+    var local = $("sourceTypeSelect").value === "local";
+    $("remoteSourceFields").hidden = local;
+    $("localSourceFields").hidden = !local;
+    $("searchResults").hidden = true;
+  }
+  function buildLocalImportForm() {
+    var files = Array.prototype.slice.call($("localFolderInput").files || []);
+    if (!files.length) throw new Error("请先选择本地文件夹");
+    var firstPath = files[0].webkitRelativePath || "";
+    var sourceName = firstPath.split(/[\\/]/)[0];
+    if (!sourceName) throw new Error("浏览器未提供所选文件夹信息，请重新选择文件夹");
+    var total = 0;
+    var manifest = files.map(function (file) {
+      var path = file.webkitRelativePath || "";
+      var prefix = sourceName + "/";
+      if (!path || path.indexOf(prefix) !== 0) throw new Error("所选文件夹包含无效路径，请重新选择");
+      total += Number(file.size || 0);
+      return { path: path.slice(prefix.length), size: file.size };
+    });
+    if (total > 500 * 1024 * 1024) throw new Error("本地文件夹超过 500 MB 导入上限");
+    var form = new FormData();
+    form.append("kind", state.drawerKind);
+    form.append("downloadMode", $("downloadMode").value);
+    form.append("sourceName", sourceName);
+    form.append("manifest", JSON.stringify(manifest));
+    files.forEach(function (file) { form.append("files", file, file.name); });
+    return form;
   }
   function inferSourceType(source, kind) {
     var selectedType = $("sourceTypeSelect").value;
     if (selectedType && selectedType !== "auto") return selectedType;
-    if (/^(?:\/|\.{1,2}\/|~\/|[A-Za-z]:[\\/])/.test(source)) return "local";
     if (/^https?:\/\//i.test(source)) return /github\.com/i.test(source) ? "github" : "huggingface";
     return kind === "model" ? "github" : "huggingface";
   }
   async function importResource() {
     var source = $("sourceInput").value.trim();
-    if (!source) { showToast("请填写资源来源"); return; }
+    var local = $("sourceTypeSelect").value === "local";
+    if (!local && !source) { showToast("请填写资源来源"); return; }
     resetImportTrace(); $("importResource").disabled = true; $("importResource").textContent = "解析中…"; addImportEvent("开始解析资源");
     try {
-      var response = await request("/api/resources/import", {
-        method: "POST", headers: { "Content-Type": "application/json", Accept: "text/event-stream, application/json" },
-        body: JSON.stringify({ kind: state.drawerKind, sourceType: inferSourceType(source, state.drawerKind), source: source, revision: $("revisionInput").value.trim() || undefined, downloadMode: $("downloadMode").value })
-      });
+      var response;
+      if (local) {
+        response = await request("/api/resources/import-local", {
+          method: "POST", headers: { Accept: "text/event-stream, application/json" }, body: buildLocalImportForm()
+        });
+      } else {
+        response = await request("/api/resources/import", {
+          method: "POST", headers: { "Content-Type": "application/json", Accept: "text/event-stream, application/json" },
+          body: JSON.stringify({ kind: state.drawerKind, sourceType: inferSourceType(source, state.drawerKind), source: source, revision: $("revisionInput").value.trim() || undefined, downloadMode: $("downloadMode").value })
+        });
+      }
       var result = null, failure = null;
       await consumeSse(response, {
         data: function (data) { result = data.resource ? data : data.result || data; },
@@ -593,7 +636,7 @@
     $("transformDatasetName").textContent = dataset.name || dataset.source || "数据集";
     $("transformModelName").textContent = model.name || model.source || "模型";
     resetTransformProgress();
-    setTransformState("running", "正在生成适配数据集", "正在根据字段映射处理数据文件，完成后会加入数据集管理。");
+    setTransformState("running", "正在闭环适配数据集", "智能体会生成受约束计划、处理文件、重新解析，并用标准兼容性分析复检；只有复检通过才会加入管理。");
     openDrawer("transformDrawer");
   }
   function finishTransform(resource) {
@@ -603,8 +646,8 @@
     state.transform.status = "completed";
     $("transformProgressBar").style.width = "100%";
     $("transformProgress").textContent = "已完成";
-    addTransformEvent("适配数据集已生成并加入数据集管理");
-    setTransformState("completed", "适配数据集已生成", "新的数据集已就绪，可以直接继续匹配。");
+    addTransformEvent("适配数据集已生成、重新解析并通过兼容性复检");
+    setTransformState("completed", "适配数据集已验证", "新的数据集已通过再次兼容性分析，可以继续匹配。");
     renderResourceGrid("dataset");
     populateResourceSelects();
     showToast("适配数据集已加入管理");
@@ -794,8 +837,9 @@
     all("[data-view-target]").forEach(function (button) { button.onclick = function () { switchView(button.dataset.viewTarget); }; });
     $("refreshDatasets").onclick = function () { loadResources("dataset"); }; $("refreshModels").onclick = function () { loadResources("model"); };
     $("openSettings").onclick = function () { openDrawer("settingsDrawer"); loadConfig(); loadWorkspace(); }; $("saveWorkspacePath").onclick = saveWorkspace; $("searchSource").onclick = searchSource; $("importResource").onclick = importResource; $("deleteResource").onclick = deleteSelectedResource; $("runCompatibility").onclick = runCompatibility; $("transformRetry").onclick = handleTransformAction;
+    $("sourceTypeSelect").onchange = syncSourceFields; $("chooseLocalFolder").onclick = function () { $("localFolderInput").click(); }; $("localFolderInput").onchange = updateLocalFolderSummary;
     $("datasetSelect").onchange = function () { updateSelectMeta("dataset"); }; $("modelSelect").onchange = function () { updateSelectMeta("model"); };
-    all("[data-drawer-kind]").forEach(function (button) { button.onclick = function () { state.drawerKind = button.dataset.drawerKind; all("[data-drawer-kind]").forEach(function (item) { item.classList.toggle("active", item === button); }); $("resourceDrawerTitle").textContent = "添加" + labels[state.drawerKind].title; configureSourceType(state.drawerKind); }; });
+    all("[data-drawer-kind]").forEach(function (button) { button.onclick = function () { state.drawerKind = button.dataset.drawerKind; all("[data-drawer-kind]").forEach(function (item) { item.classList.toggle("active", item === button); }); $("resourceDrawerTitle").textContent = "添加" + labels[state.drawerKind].title; resetLocalFolderSelection(); configureSourceType(state.drawerKind); }; });
     all("[data-close]").forEach(function (button) { button.onclick = closeDrawers; }); $("backdrop").onclick = closeDrawers; document.addEventListener("keydown", function (event) { if (event.key === "Escape") closeDrawers(); });
   }
   bind(); configureSourceType("dataset"); renderResourceGrid("dataset"); renderResourceGrid("model"); populateResourceSelects(); loadResources("dataset"); loadResources("model"); loadConfig(); loadWorkspace();

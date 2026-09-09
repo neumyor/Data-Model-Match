@@ -7,6 +7,7 @@ import hashlib
 import json
 import sys
 from dataclasses import replace
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List
 
@@ -78,6 +79,11 @@ def _stage_label(stage: str) -> str:
         "profiling": "生成标准描述",
         "deterministic": "执行确定性检查",
         "llm": "智能体补充分析",
+        "adapt_plan": "智能体生成适配计划",
+        "execute": "执行受约束适配",
+        "reprofile": "重新解析派生产物",
+        "verify": "再次兼容性分析",
+        "complete": "登记已验证数据集",
         "result": "生成兼容性报告",
     }.get(stage, stage or "处理资源")
 
@@ -137,6 +143,10 @@ def build_parser() -> argparse.ArgumentParser:
     delete = subparsers.add_parser("delete")
     delete.add_argument("resource_id")
 
+    reprofile = subparsers.add_parser("reprofile")
+    reprofile.add_argument("resource_id")
+    reprofile.add_argument("--max-bytes", type=int, default=500 * 1024 * 1024)
+
     importing = subparsers.add_parser("import")
     importing.add_argument("kind", choices=("dataset", "model"))
     importing.add_argument("source_type")
@@ -147,7 +157,7 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("metadata", "sample", "full"),
         default="sample",
     )
-    importing.add_argument("--max-bytes", type=int, default=50 * 1024 * 1024)
+    importing.add_argument("--max-bytes", type=int, default=500 * 1024 * 1024)
 
     compatibility = subparsers.add_parser("compatibility")
     compatibility.add_argument("dataset_resource_id")
@@ -158,6 +168,9 @@ def build_parser() -> argparse.ArgumentParser:
     transform.add_argument("dataset_resource_id")
     transform.add_argument("model_resource_id")
     transform.add_argument("report_json")
+    transform.add_argument("--config", default="config.llm.json")
+    transform.add_argument("--timeout", type=float, default=90)
+    transform.add_argument("--max-attempts", type=int, default=3)
     return parser
 
 
@@ -188,6 +201,8 @@ def main(argv: List[str] | None = None) -> int:
             store.delete(args.resource_id)
             print(json.dumps({"deleted": True, "id": args.resource_id}, ensure_ascii=False))
             return 0
+        if args.command == "reprofile":
+            return _reprofile(args, store)
         if args.command == "import":
             return _import(args, store)
         if args.command == "compatibility":
@@ -195,7 +210,7 @@ def main(argv: List[str] | None = None) -> int:
         if args.command == "transform-dataset":
             return _transform_dataset(args, store)
     except Exception as exc:
-        if args.command in {"import", "compatibility", "transform-dataset"}:
+        if args.command in {"import", "reprofile", "compatibility", "transform-dataset"}:
             _emit("error", {"code": _error_code(exc), "message": str(exc)})
             _emit("end", {"status": "failed"})
         else:
@@ -274,6 +289,48 @@ def _import(args: argparse.Namespace, store: ResourceStore) -> int:
     return 0
 
 
+def _reprofile(args: argparse.Namespace, store: ResourceStore) -> int:
+    record = store.get(args.resource_id)
+    if record.kind != "dataset" or record.source_type != "local":
+        raise ValueError("目前仅支持重新解析本地数据集资源")
+    if isinstance(args.max_bytes, bool) or args.max_bytes < 1:
+        raise ValueError("max_bytes 必须是正整数")
+    from .dataset_resources import reprofile_dataset_snapshot
+
+    _emit("stage", {"stage": "scanning", "status": "started"})
+    profile, file_count, size_bytes = reprofile_dataset_snapshot(
+        record.id,
+        record.name,
+        record.source_type,
+        record.source,
+        record.resolved_revision,
+        store.resource_path(record.id),
+        args.max_bytes,
+    )
+    _emit("stage", {"stage": "profiling", "status": "started"})
+    profile["trace"] = [
+        {"event": "stage", "stage": "scanning", "status": "completed", "message": "已重新扫描资源快照"},
+        {"event": "stage", "stage": "profiling", "status": "completed", "message": "已使用当前静态适配器生成描述"},
+    ]
+    updated_record = replace(
+        record,
+        status="ready" if profile["completeness"] >= 0.5 else "needs_review",
+        file_count=file_count,
+        size_bytes=size_bytes,
+        updated_at=_iso_now(),
+        warnings=list(profile["warnings"]),
+    )
+    store.save(updated_record, profile)
+    _emit("stage", {"stage": "profiling", "status": "completed"})
+    _emit("result", {"resource": updated_record.to_dict(), "profile": profile})
+    _emit("end", {"status": "completed"})
+    return 0
+
+
+def _iso_now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
 def _validate_local_source(source: str, store: ResourceStore) -> str:
     origin = Path(source).expanduser()
     if not origin.is_dir() or origin.is_symlink():
@@ -333,6 +390,8 @@ def _transform_dataset(args: argparse.Namespace, store: ResourceStore) -> int:
         f"{dataset.id}\0{model.id}\0{json.dumps(report, sort_keys=True, ensure_ascii=False)}",
     )
     destination = store.root / "resources" / "datasets" / resource_id
+    config = load_llm_config(Path(args.config))
+    client = LLMClient(config, args.timeout)
     record, profile = transform_dataset(
         store,
         dataset.id,
@@ -341,6 +400,8 @@ def _transform_dataset(args: argparse.Namespace, store: ResourceStore) -> int:
         destination,
         resource_id,
         _forward_module_event,
+        client=client,
+        max_attempts=args.max_attempts,
     )
     _emit("result", {"resource": record.to_dict(), "profile": profile})
     _emit("end", {"status": "completed"})

@@ -180,7 +180,7 @@ def _deterministic_analysis(dataset: dict[str, Any], model: dict[str, Any]) -> d
     _check_task(dataset, model, state)
     _check_modality(dataset, model, state)
     _check_fields(dataset, model, state)
-    _check_preprocessing(model, state)
+    _check_preprocessing(dataset, model, state)
     _check_labels(dataset, model, state)
     _check_license(dataset, model, state)
     _check_runtime(model, state)
@@ -294,10 +294,26 @@ def _check_fields(dataset: dict[str, Any], model: dict[str, Any], state: dict[st
     )
 
 
-def _check_preprocessing(model: dict[str, Any], state: dict[str, Any]) -> None:
+def _check_preprocessing(dataset: dict[str, Any], model: dict[str, Any], state: dict[str, Any]) -> None:
     preprocessing = model["inputContract"]["preprocessing"]
     if not preprocessing:
         _dimension(state, "preprocessing", "compatible", 1.0, "模型未声明额外预处理要求。")
+        return
+    adapter = dataset.get("adapter")
+    satisfied: set[str] = set()
+    if isinstance(adapter, dict) and adapter.get("kind") == "contract-adapter":
+        raw_steps = adapter.get("satisfiedPreprocessing", [])
+        if isinstance(raw_steps, list) and all(isinstance(step, str) for step in raw_steps):
+            satisfied = {_normalise(step) for step in raw_steps if _normalise(step)}
+    required = {_normalise(step) for step in preprocessing if _normalise(step)}
+    if required and required <= satisfied:
+        _dimension(
+            state,
+            "preprocessing",
+            "compatible",
+            1.0,
+            "派生数据集的受校验适配契约已覆盖模型声明的全部预处理步骤。",
+        )
         return
     for step in preprocessing:
         state["transforms"].append(f"执行模型要求的预处理：{step}。")
@@ -386,11 +402,14 @@ def _apply_supplement(
             field = fields_by_name[mapping["modelField"]]
             relations.append(_type_relation(feature["dataType"], field["dataType"]))
             shapes.append(_shape_relation(feature.get("shape", []), field.get("shape", [])))
+        field_status = "compatible" if all(
+            mapping.get("kind") == "exact" for mapping in state["field_mappings"]
+        ) else "adaptable"
         _replace_dimension(
             state,
             "input_fields",
-            "adaptable",
-            0.85,
+            field_status,
+            1.0 if field_status == "compatible" else 0.85,
             "模型必需输入字段已通过确定性或语义映射覆盖。",
         )
         _replace_dimension(

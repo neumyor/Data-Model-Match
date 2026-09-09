@@ -15,6 +15,7 @@ import os
 import re
 import shutil
 import tempfile
+import xml.etree.ElementTree as ET
 from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -43,6 +44,7 @@ CHUNK_SIZE = 64 * 1024
 SUPPORTED_DOWNLOAD_MODES = frozenset({"metadata", "sample", "full"})
 SUPPORTED_SOURCE_TYPES = frozenset({"huggingface", "local"})
 DATA_SUFFIXES = frozenset({".csv", ".json", ".jsonl", ".ndjson", ".parquet"})
+IMAGE_SUFFIXES = frozenset({".jpg", ".jpeg", ".png", ".webp"})
 SENSITIVE_FILENAMES = frozenset({
     ".env",
     ".env.local",
@@ -191,6 +193,43 @@ def import_dataset(
         )
     _emit(emit, "result", {"record": record.to_dict(), "profile": profile})
     return record, profile
+
+
+def reprofile_dataset_snapshot(
+    resource_id: str,
+    name: str,
+    source_type: str,
+    source_location: str,
+    revision: str,
+    snapshot: Path | str,
+    max_bytes: int,
+) -> Tuple[Dict[str, Any], int, int]:
+    """Rebuild a profile from an existing managed dataset snapshot.
+
+    This is intentionally read-only with respect to the snapshot.  It allows
+    datasets imported before a new static adapter was added to gain the new
+    description without reacquiring the user's source directory.
+    """
+
+    _safe_resource_id(resource_id)
+    snapshot_path = Path(snapshot).expanduser()
+    if not snapshot_path.is_dir() or snapshot_path.is_symlink():
+        raise DatasetResourceError("dataset snapshot must be an existing non-symbolic-link directory")
+    if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes < 1:
+        raise DatasetResourceError("max_bytes must be a positive integer")
+    file_infos, scan_warnings = _safe_inventory(snapshot_path.resolve(), max_bytes)
+    profile = _build_profile(
+        resource_id=resource_id,
+        name=name,
+        description=f"从本地目录导入的数据集：{name}",
+        source_type=source_type,
+        source_location=source_location,
+        revision=revision,
+        file_infos=file_infos,
+        source_metadata={},
+        source_warnings=scan_warnings,
+    )
+    return profile, len(file_infos), sum(item.size_bytes for item in file_infos)
 
 
 def _import_huggingface(
@@ -371,6 +410,9 @@ def _build_profile(
         if _is_dataset_file(item.relative_path)
         and item.relative_path != "dataset-metadata.json"
     ]
+    cvat_analysis = _analyse_cvat_tracking(file_infos)
+    if cvat_analysis is not None:
+        analyses.append(cvat_analysis)
     formats = _unique_strings([analysis["format"] for analysis in analyses])
     all_features = _merge_features(analyses)
     sample_count = sum(
@@ -456,6 +498,138 @@ def _analyse_file(file_info: _FileInfo) -> Dict[str, Any]:
     if suffix == ".parquet":
         return _analyse_parquet(file_info)
     raise DatasetResourceError(f"Unsupported dataset file passed to analyser: {file_info.relative_path}")
+
+
+def _analyse_cvat_tracking(file_infos: Sequence[_FileInfo]) -> Optional[Dict[str, Any]]:
+    """Build an object-detection contract from a CVAT tracking XML export.
+
+    CVAT exports image frames separately from `annotations.xml`.  The XML is
+    parsed as data only; no media file is decoded or code executed.
+    """
+
+    annotation = next(
+        (item for item in file_infos if Path(item.relative_path).name.lower() == "annotations.xml"),
+        None,
+    )
+    if annotation is None:
+        return None
+
+    frame_images = [
+        item
+        for item in file_infos
+        if Path(item.relative_path).suffix.lower() in IMAGE_SUFFIXES
+        and _is_cvat_frame_image(item.relative_path)
+    ]
+    warnings: List[str] = []
+    try:
+        root = ET.parse(annotation.path).getroot()
+    except (ET.ParseError, OSError) as exc:
+        return {
+            "path": annotation.relative_path,
+            "format": "cvat-xml",
+            "features": [],
+            "sampleCount": 0,
+            "split": "unknown",
+            "splitCounts": OrderedDict([("unknown", None)]),
+            "modalities": ["image"],
+            "taskHints": [],
+            "warnings": [f"无法解析 CVAT 标注文件 {annotation.relative_path}: {exc}"],
+            "evidence": "发现 CVAT 标注文件，但 XML 无法解析",
+        }
+    if root.tag != "annotations":
+        return None
+
+    width = _xml_positive_int(root.findtext("./meta/task/original_size/width"))
+    height = _xml_positive_int(root.findtext("./meta/task/original_size/height"))
+    labels: List[str] = []
+    track_ids: set[str] = set()
+    visible_boxes = 0
+    annotated_frames: set[int] = set()
+    invalid_boxes = 0
+    for track in root.findall("track"):
+        track_id = _optional_text(track.get("id"))
+        if track_id:
+            track_ids.add(track_id)
+        label = _optional_text(track.get("label"))
+        if label:
+            labels.append(label)
+        for box in track.findall("box"):
+            if box.get("outside") == "1":
+                continue
+            frame = _xml_nonnegative_int(box.get("frame"))
+            coordinates = [_xml_float(box.get(name)) for name in ("xtl", "ytl", "xbr", "ybr")]
+            if frame is None or any(value is None for value in coordinates):
+                invalid_boxes += 1
+                continue
+            left, top, right, bottom = coordinates
+            if right is None or bottom is None or left is None or top is None or right <= left or bottom <= top:
+                invalid_boxes += 1
+                continue
+            visible_boxes += 1
+            annotated_frames.add(frame)
+    if invalid_boxes:
+        warnings.append(f"已跳过 {invalid_boxes} 个坐标无效的 CVAT 边界框")
+    if not frame_images:
+        warnings.append("CVAT 标注未找到原始图像帧；无法验证帧文件对应关系")
+    if not visible_boxes:
+        warnings.append("CVAT 标注中没有可用的边界框")
+
+    image_shape: List[object] = [height, width, 3] if height and width else []
+    label_names = _unique_strings(labels)
+    features = [
+        DatasetFeature("image", "image", "input", False, image_shape, "CVAT 原始图像帧"),
+        DatasetFeature("boxes", "array", "label", False, ["variable", 4], "每帧目标边界框，像素坐标顺序为 xtl、ytl、xbr、ybr"),
+        DatasetFeature("labels", "classlabel", "label", False, ["variable"], "每个边界框对应的 CVAT 类别：" + ("、".join(label_names) or "未声明")),
+        DatasetFeature("track_ids", "array", "identifier", False, ["variable"], "每个边界框对应的 CVAT 轨迹 ID"),
+    ]
+    image_count = len(frame_images)
+    sample_count = image_count or len(annotated_frames)
+    return {
+        "path": annotation.relative_path,
+        "format": "cvat-xml",
+        "features": features,
+        "sampleCount": sample_count,
+        "split": "unknown",
+        "splitCounts": OrderedDict([("unknown", sample_count or None)]),
+        "modalities": ["image"],
+        "taskHints": ["object-detection", "object-tracking"],
+        "warnings": warnings,
+        "evidence": (
+            f"解析 CVAT 跟踪标注：{image_count} 帧原始图像、{visible_boxes} 个有效边界框、"
+            f"{len(track_ids)} 条轨迹、{len(label_names)} 个类别"
+        ),
+    }
+
+
+def _is_cvat_frame_image(relative_path: str) -> bool:
+    parts = [part.lower() for part in Path(relative_path).parts]
+    if "boxes" in parts or "overlays" in parts or "visualizations" in parts:
+        return False
+    return "images" in parts or len(parts) == 1
+
+
+def _xml_positive_int(value: Any) -> Optional[int]:
+    result = _xml_nonnegative_int(value)
+    return result if result is not None and result > 0 else None
+
+
+def _xml_nonnegative_int(value: Any) -> Optional[int]:
+    if not isinstance(value, str):
+        return None
+    try:
+        result = int(value)
+    except ValueError:
+        return None
+    return result if result >= 0 else None
+
+
+def _xml_float(value: Any) -> Optional[float]:
+    if not isinstance(value, str):
+        return None
+    try:
+        return float(value)
+    except ValueError:
+        return None
 
 
 def _analyse_csv(file_info: _FileInfo) -> Dict[str, Any]:
