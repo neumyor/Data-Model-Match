@@ -95,6 +95,31 @@ class SemanticRuntimeTests(unittest.TestCase):
         self.assertTrue(agent.context["inspections"])
         self.assertTrue(agent.context["evidence"][0]["id"].startswith("evidence_"))
 
+    def test_agent_can_reference_all_bounded_snapshot_evidence(self) -> None:
+        class AllEvidenceAgent(_Agent):
+            def analyze_dataset(self, context):
+                result = super().analyze_dataset(context)
+                result["evidenceRefs"] = [item["id"] for item in context["evidence"]]
+                return result
+
+        with tempfile.TemporaryDirectory() as directory:
+            store = ResourceStore(Path(directory) / "store")
+            record = _record("dataset_all_evidence")
+            root = store.root / record.local_path
+            root.mkdir(parents=True)
+            for index in range(13):
+                (root / f"metadata_{index}.json").write_text("{}", encoding="utf-8")
+            store.save(record, {"version": 1})
+
+            profile = build_semantic_profile(
+                store,
+                record.id,
+                config_path=Path(directory) / "missing-vlm.json",
+                agent_client=AllEvidenceAgent(),
+            )
+
+        self.assertGreater(len(profile["agentAnalysis"]["evidenceRefs"]), 12)
+
     def test_agent_must_cite_only_this_snapshot_evidence(self) -> None:
         class InvalidAgent(_Agent):
             def analyze_dataset(self, context):

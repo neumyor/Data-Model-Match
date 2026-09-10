@@ -243,7 +243,11 @@ def _validate_dataset_analysis(
         for item in evidence
         if isinstance(item.get("id"), str)
     }
-    evidence_refs = _agent_texts(raw.get("evidenceRefs"), "evidenceRefs")
+    evidence_refs = _agent_texts(
+        raw.get("evidenceRefs"),
+        "evidenceRefs",
+        maximum_items=len(allowed_refs),
+    )
     if not evidence_refs or any(item not in allowed_refs for item in evidence_refs):
         raise SemanticRuntimeError("语义 Agent 引用了无效证据")
     return {
@@ -267,8 +271,8 @@ def _agent_text(value: object, label: str, maximum: int) -> str:
     return value.strip()
 
 
-def _agent_texts(value: object, label: str) -> list[str]:
-    if not isinstance(value, list) or len(value) > 12:
+def _agent_texts(value: object, label: str, maximum_items: int = 12) -> list[str]:
+    if not isinstance(value, list) or len(value) > maximum_items:
         raise SemanticRuntimeError(f"语义 Agent 返回的 {label} 无效")
     result = [
         item.strip()
