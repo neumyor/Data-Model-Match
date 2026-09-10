@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "surfaceId": "frozen_contract_surface_semantic_v1",
+  "coverageRoots": [
+    "docs/semantic-contracts",
+    "tests/semantic_contracts"
+  ],
+  "artifacts": [
+    {"path": "docs/semantic-contracts/WP0-A-plan.md", "sha256": "b0d70e9f37ec3c673f9d1ed512552584a42c1c4a2e18e53d0a7a100e9e8a6048"},
+    {"path": "docs/semantic-contracts/common.schema.json", "sha256": "38d3da804426a9ec49db08b0b939b5e580d5debd7f0389773f8ec167056131fe"},
+    {"path": "docs/semantic-contracts/contract-manifest.json", "sha256": "5a21d7dfafb8909307067b7f103937d5ecbbcbcd481d9cf355a868f4bcba4ed5"},
+    {"path": "docs/semantic-contracts/dataset-semantic-profile.schema.json", "sha256": "8b3b1a9893bc253fa5b6263b31edcec623665318a6d47e5e0e598fc7a62bc288"},
+    {"path": "docs/semantic-contracts/dataset-task-match-result.schema.json", "sha256": "de96a3b8f48e433195c9a073f73da702ffdc22061badc6f55357d507f23eb304"},
+    {"path": "docs/semantic-contracts/error-envelope.schema.json", "sha256": "3e4de8ee923803a1ab86d0d5747c2d1f4ff62c19b62d78993edfbac44cc38809"},
+    {"path": "docs/semantic-contracts/fixtures/contracts.json", "sha256": "708f4f2daf2fafa9a8b490ef057e646b45c4854e2ec592f12102009a198ac020"},
+    {"path": "docs/semantic-contracts/frontend-types.d.ts", "sha256": "68abb68c70394b6202a51c9d726a7ac73a9dc50b56c2a0b3f5eea767a8a16521"},
+    {"path": "docs/semantic-contracts/job-runtime-semantics-v1.json", "sha256": "9c16628857b0e2c402da5fba31ab0146487315615b2881421ecd0090dbab5adc"},
+    {"path": "docs/semantic-contracts/match-job-get-response.schema.json", "sha256": "8ad61741d98bc826888aedb4d8ca88c9f3da9368b4eec2ce654d941c2f3b4807"},
+    {"path": "docs/semantic-contracts/match-job-request.schema.json", "sha256": "d3b0f36d9fa69f1b2e9bc37f87ad946db290e29cd76ce3352a1e3859674bb0c2"},
+    {"path": "docs/semantic-contracts/match-job-response.schema.json", "sha256": "c5736da1ab5f090c52ff2b717e3a70c8cf424fabf096a5b1d241469ef072ef5b"},
+    {"path": "docs/semantic-contracts/match-job.schema.json", "sha256": "f2a4b317252366f9ac1246f564ae20548ec8ad43f1160504b845ca558a301f7d"},
+    {"path": "docs/semantic-contracts/profile-job-cancel-response.schema.json", "sha256": "0b687b8b478ed689208bf9a2f26f333982bc731dd078a1e0d00c4fdf20bee0b5"},
+    {"path": "docs/semantic-contracts/profile-job-get-response.schema.json", "sha256": "cc8ec6f4beaf27f77c7e3bb4f7dc19bbdafb731d5216d96928c181f7d22c9596"},
+    {"path": "docs/semantic-contracts/profile-job-request.schema.json", "sha256": "9fab0d77d74c449e855c2c758735766d630e1df1f4fa30200411ec8b04315c22"},
+    {"path": "docs/semantic-contracts/profile-job-response.schema.json", "sha256": "14b59f4598e981a59d177f2f1a24170f0b2725ae12b31542aff2122a0e19330d"},
+    {"path": "docs/semantic-contracts/profile-job.schema.json", "sha256": "4aee0befc7732e78f89248f5933cbbcfa8b0a9ad95b363cd2187d1128ae9de81"},
+    {"path": "docs/semantic-contracts/python_types.py", "sha256": "61530663177b56956e7368adeabb3cf89d292a7b293a9ad8b15a87a609ec78d7"},
+    {"path": "docs/semantic-contracts/schema-catalog.json", "sha256": "69fdb215e067fb9feb06e4a8e296fc256f9d481206044a0722c5a2027c6c04e4"},
+    {"path": "docs/semantic-contracts/semantic-contract-rfc.md", "sha256": "037b0093ead76511ac2b12f2067f445e13041418f5917056121cc490b3298e98"},
+    {"path": "docs/semantic-contracts/sse-event.schema.json", "sha256": "b1b3f0209a3490a566b20a616bceba9a3c18006dc880d3fa17717bc7531063de"},
+    {"path": "docs/semantic-contracts/task-profile-api.schema.json", "sha256": "cffa8d98908c9f98355bb6ddf82e6c68eeb1251bd41e4b8a5227d1ab84cfd4c3"},
+    {"path": "docs/semantic-contracts/task-profile-create-request.schema.json", "sha256": "c674b8bd8974eb39d4db319a4b28a392f578bdf607693ca391d15349ac14eae3"},
+    {"path": "docs/semantic-contracts/task-profile-create-response.schema.json", "sha256": "9402f0dddef204d395a165119c26c60e596dfed054d000acee66d419fa6e5851"},
+    {"path": "docs/semantic-contracts/task-semantic-profile.schema.json", "sha256": "06379869e77ceb77e90855dd2a1607cdfe30ec7d8dc1029c6d55be59bf344c27"},
+    {"path": "docs/semantic-contracts/type-parity-manifest.json", "sha256": "5a049e140415e78ce75a2387d5ec05cab75e0111ca6a9c9381b0e8998153e936"},
+    {"path": "docs/semantic-contracts/vlm-configuration.schema.json", "sha256": "e0208934fdfaa6a715aace10114c4c72c3031cc0380ccb69f96beec6cbd5e261"},
+    {"path": "tests/semantic_contracts/test_contract_schemas.py", "sha256": "10729ba9664e1ee5c01df99ea0d89e0c94093110da1f8d4a69bcd31a1f07786a"},
+    {"path": "tests/semantic_contracts/test_job_runtime_semantics.py", "sha256": "92d3f4959be81f39269d210d3408519710a05d4450e1b87664e35aafc0b88222"},
+    {"path": "tests/semantic_contracts/test_type_parity.py", "sha256": "97b4839df26b378d37f320c56c4623e9aebbc948f0240d8cb02fec332823b8da"},
+    {"path": "tests/semantic_contracts/test_vlm_modality_contract.py", "sha256": "3bde406a88787187c21a9dd444353dab32b589a21f5a0279d47d709ddd39bb00"}
+  ]
+}

@@ -921,6 +921,81 @@ const server = Bun.serve({
       }
     }
 
+    const semanticProfileMatch = url.pathname.match(
+      /^\/api\/dataset-semantic-profiles\/([A-Za-z0-9_-]+)$/,
+    );
+    if (semanticProfileMatch && request.method === "GET") {
+      try {
+        return jsonResponse(
+          await runResourceJson(["semantic-profile-get", semanticProfileMatch[1]]),
+        );
+      } catch (error) {
+        if (error instanceof RequestError) {
+          return errorResponse(error.code, error.message, error.status);
+        }
+        return errorResponse("SEMANTIC_PROFILE_READ_FAILED", toSafeMessage(error), 500);
+      }
+    }
+
+    if (url.pathname === "/api/dataset-semantic-profiles/jobs") {
+      if (request.method !== "POST") {
+        return errorResponse("METHOD_NOT_ALLOWED", "该接口只支持 POST 请求", 405);
+      }
+      try {
+        const body = await readJsonObject(request);
+        const resourceId = typeof body.resourceId === "string" ? body.resourceId : "";
+        if (!resourceId) {
+          throw new RequestError("INVALID_INPUT", "语义分析需要 resourceId", 400);
+        }
+        const args = ["semantic-profile", resourceId];
+        if (body.force === true) args.push("--force");
+        return jsonResponse(await runResourceJson(args));
+      } catch (error) {
+        if (error instanceof RequestError) {
+          return errorResponse(error.code, error.message, error.status);
+        }
+        return errorResponse("SEMANTIC_PROFILE_FAILED", toSafeMessage(error), 500);
+      }
+    }
+
+    if (url.pathname === "/api/task-profiles") {
+      if (request.method !== "POST") {
+        return errorResponse("METHOD_NOT_ALLOWED", "该接口只支持 POST 请求", 405);
+      }
+      try {
+        const body = await readJsonObject(request);
+        const text = typeof body.text === "string" ? body.text.trim() : "";
+        if (!text) {
+          throw new RequestError("INVALID_INPUT", "任务描述不能为空", 400);
+        }
+        return jsonResponse(await runResourceJson(["task-profile", text]));
+      } catch (error) {
+        if (error instanceof RequestError) {
+          return errorResponse(error.code, error.message, error.status);
+        }
+        return errorResponse("TASK_PROFILE_FAILED", toSafeMessage(error), 500);
+      }
+    }
+
+    if (url.pathname === "/api/dataset-task-matches") {
+      if (request.method !== "POST") {
+        return errorResponse("METHOD_NOT_ALLOWED", "该接口只支持 POST 请求", 405);
+      }
+      try {
+        const body = await readJsonObject(request);
+        const text = typeof body.text === "string" ? body.text.trim() : "";
+        if (!text) {
+          throw new RequestError("INVALID_INPUT", "任务描述不能为空", 400);
+        }
+        return jsonResponse(await runResourceJson(["dataset-task-match", text]));
+      } catch (error) {
+        if (error instanceof RequestError) {
+          return errorResponse(error.code, error.message, error.status);
+        }
+        return errorResponse("DATASET_TASK_MATCH_FAILED", toSafeMessage(error), 500);
+      }
+    }
+
     const resourceMatch = url.pathname.match(/^\/api\/resources\/([A-Za-z0-9_-]+)$/);
     if (resourceMatch) {
       const resourceId = resourceMatch[1];

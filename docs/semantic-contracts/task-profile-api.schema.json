@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.local/schemas/semantic/v1/task-profile-api.schema.json",
+  "title": "Task profile API v1",
+  "$defs": {
+    "request": {"$ref": "task-semantic-profile.schema.json"},
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "taskProfile"],
+      "properties": {
+        "version": {"const": 1},
+        "taskProfile": {"$ref": "task-semantic-profile.schema.json"}
+      }
+    }
+  }
+}

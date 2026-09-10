@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.invalid/schemas/semantic-benchmark/benchmark-manifest-1.json",
+  "title": "De-identified semantic benchmark manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "manifestId",
+    "datasetCount",
+    "taskFamilyCount",
+    "taskQueryCount",
+    "taskFamilies",
+    "datasets",
+    "taskQueries",
+    "split",
+    "seed",
+    "deidentification"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "manifestId": { "type": "string", "pattern": "^manifest_[a-z0-9_]+$" },
+    "datasetCount": { "type": "integer", "minimum": 15, "maximum": 30 },
+    "taskFamilyCount": { "type": "integer", "minimum": 4, "maximum": 6 },
+    "taskQueryCount": { "type": "integer", "minimum": 50, "maximum": 100 },
+    "taskFamilies": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "image_classification",
+          "object_detection",
+          "multi_object_tracking",
+          "semantic_or_instance_segmentation",
+          "pose_or_keypoint",
+          "action_or_video_understanding",
+          "video_anomaly_detection",
+          "re_identification_or_retrieval"
+        ]
+      }
+    },
+    "datasets": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 30,
+      "items": {
+        "$ref": "#/$defs/dataset"
+      }
+    },
+    "taskQueries": {
+      "type": "array",
+      "minItems": 50,
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/taskQuery"
+      }
+    },
+    "split": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["datasetIds", "queryIds"],
+      "properties": {
+        "datasetIds": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["development", "calibration", "test"],
+          "properties": {
+            "development": { "$ref": "#/$defs/idList" },
+            "calibration": { "$ref": "#/$defs/idList" },
+            "test": { "$ref": "#/$defs/idList" }
+          }
+        },
+        "queryIds": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["development", "calibration", "test"],
+          "properties": {
+            "development": { "$ref": "#/$defs/idList" },
+            "calibration": { "$ref": "#/$defs/idList" },
+            "test": { "$ref": "#/$defs/idList" }
+          }
+        }
+      }
+    },
+    "seed": { "type": "integer", "minimum": 0 },
+    "deidentification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "mediaStorage", "allowedReferences", "forbiddenReferences"],
+      "properties": {
+        "status": { "const": "deidentified" },
+        "mediaStorage": { "const": "git_ignored_external_storage" },
+        "allowedReferences": {
+          "type": "array",
+          "items": { "enum": ["stable_anonymous_id", "license_class", "source_class", "revision_digest"] }
+        },
+        "forbiddenReferences": {
+          "type": "array",
+          "items": { "enum": ["dataset_name", "absolute_path", "credential", "authorization_header", "raw_media", "private_url"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "idList": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+      "uniqueItems": true
+    },
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "datasetId",
+        "license",
+        "source",
+        "revision",
+        "acquisition",
+        "taskFamilies",
+        "groundTruthVersion",
+        "perturbationVersions"
+      ],
+      "properties": {
+        "datasetId": { "type": "string", "pattern": "^ds_[a-z0-9_]+$" },
+        "license": {
+          "type": "string",
+          "enum": ["permissive_open", "research_only", "custom_review_required", "unknown_pending_review"]
+        },
+        "source": {
+          "type": "string",
+          "enum": ["public_repository", "public_archive", "institutional_release", "internal_release_redacted"]
+        },
+        "revision": { "type": "string", "pattern": "^rev_[a-f0-9]{12,64}$" },
+        "acquisition": {
+          "type": "string",
+          "enum": ["manual_download", "versioned_snapshot", "approved_internal_mirror"]
+        },
+        "taskFamilies": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "image_classification",
+              "object_detection",
+              "multi_object_tracking",
+              "semantic_or_instance_segmentation",
+              "pose_or_keypoint",
+              "action_or_video_understanding",
+              "video_anomaly_detection",
+              "re_identification_or_retrieval"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "groundTruthVersion": { "type": "string", "pattern": "^gt_[a-z0-9_.-]+$" },
+        "perturbationVersions": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^perturbation_[a-z0-9_.-]+$" },
+          "uniqueItems": true
+        }
+      }
+    },
+    "taskQuery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["queryId", "taskFamily", "queryRevision", "groundTruthVersion", "perturbationVersions"],
+      "properties": {
+        "queryId": { "type": "string", "pattern": "^q_[a-z0-9_]+$" },
+        "taskFamily": {
+          "enum": [
+            "image_classification",
+            "object_detection",
+            "multi_object_tracking",
+            "semantic_or_instance_segmentation",
+            "pose_or_keypoint",
+            "action_or_video_understanding",
+            "video_anomaly_detection",
+            "re_identification_or_retrieval"
+          ]
+        },
+        "queryRevision": { "type": "string", "pattern": "^query_rev_[a-f0-9]{12,64}$" },
+        "groundTruthVersion": { "type": "string", "pattern": "^gt_[a-z0-9_.-]+$" },
+        "perturbationVersions": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^perturbation_[a-z0-9_.-]+$" },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

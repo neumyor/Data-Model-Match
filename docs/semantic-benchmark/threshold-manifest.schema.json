@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.invalid/schemas/semantic-benchmark/threshold-manifest-1.json",
+  "title": "Semantic benchmark threshold manifest",
+  "description": "Versioned pilot or independently calibrated threshold state. Cross-field state rules are enforced by the companion mechanical validator.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "thresholdManifestId",
+    "status",
+    "benchmarkManifestId",
+    "createdAt",
+    "frozenBeforeFinalBenchmark",
+    "calibrationRequired",
+    "calibrationProtocol",
+    "calibrationEvidence",
+    "approval",
+    "thresholds",
+    "nonNegotiableRules"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "thresholdManifestId": {
+      "type": "string",
+      "pattern": "^thresholds_[a-z0-9_]+$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "preliminary_pending_independent_calibration",
+        "final_approved"
+      ]
+    },
+    "benchmarkManifestId": {
+      "type": "string",
+      "pattern": "^manifest_[a-z0-9_]+$"
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "frozenBeforeFinalBenchmark": { "const": true },
+    "calibrationRequired": { "const": true },
+    "calibrationProtocol": { "$ref": "#/$defs/calibrationProtocol" },
+    "calibrationEvidence": { "$ref": "#/$defs/calibrationEvidence" },
+    "approval": { "$ref": "#/$defs/approval" },
+    "thresholds": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": { "$ref": "#/$defs/threshold" }
+    },
+    "nonNegotiableRules": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "preliminary_pending_independent_calibration"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "calibrationEvidence": {
+            "properties": { "status": { "const": "pending" } }
+          },
+          "approval": {
+            "properties": { "status": { "const": "pending" } }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "final_approved" } }
+      },
+      "then": {
+        "properties": {
+          "calibrationEvidence": {
+            "properties": {
+              "status": { "const": "completed" },
+              "reportId": { "type": "string", "pattern": "^calibration_[a-z0-9_]+$" },
+              "reportSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "completedAt": { "type": "string", "format": "date-time" }
+            }
+          },
+          "approval": {
+            "properties": {
+              "status": { "const": "approved" },
+              "approverId": { "type": "string", "pattern": "^approver_[a-z0-9_]+$" },
+              "approvedAt": { "type": "string", "format": "date-time" },
+              "changeRecordId": { "type": "string", "pattern": "^CR-[0-9]{4,}$" }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "calibrationProtocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pilotManifestId",
+        "protocolVersion",
+        "independentCalibrator",
+        "independentCalibratorStatus",
+        "minimumDatasets",
+        "minimumTaskFamilies",
+        "minimumQueries",
+        "repetitionsPerCondition",
+        "seedSchedule",
+        "approvalRequired",
+        "finalThresholdsMustBeCommittedBefore"
+      ],
+      "properties": {
+        "pilotManifestId": { "type": "string", "pattern": "^manifest_[a-z0-9_]+$" },
+        "protocolVersion": { "type": "string", "pattern": "^[a-z0-9_]+_v[0-9]+$" },
+        "independentCalibrator": {
+          "type": "string",
+          "pattern": "^(to_be_assigned|calibrator_[a-z0-9_]+)$"
+        },
+        "independentCalibratorStatus": {
+          "type": "string",
+          "enum": ["pending", "assigned", "completed"]
+        },
+        "minimumDatasets": { "type": "integer", "minimum": 1 },
+        "minimumTaskFamilies": { "type": "integer", "minimum": 1 },
+        "minimumQueries": { "type": "integer", "minimum": 1 },
+        "repetitionsPerCondition": { "type": "integer", "minimum": 1 },
+        "seedSchedule": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "integer", "minimum": 0 },
+          "uniqueItems": true
+        },
+        "approvalRequired": { "const": true },
+        "finalThresholdsMustBeCommittedBefore": {
+          "const": "final_benchmark_execution"
+        }
+      }
+    },
+    "calibrationEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reportId", "reportSha256", "completedAt"],
+      "properties": {
+        "status": { "enum": ["pending", "completed"] },
+        "reportId": {
+          "type": ["string", "null"],
+          "pattern": "^calibration_[a-z0-9_]+$"
+        },
+        "reportSha256": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "completedAt": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "approverId", "approvedAt", "changeRecordId"],
+      "properties": {
+        "status": { "enum": ["pending", "approved"] },
+        "approverId": {
+          "type": ["string", "null"],
+          "pattern": "^approver_[a-z0-9_]+$"
+        },
+        "approvedAt": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "changeRecordId": {
+          "type": ["string", "null"],
+          "pattern": "^CR-[0-9]{4,}$"
+        }
+      }
+    },
+    "threshold": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operator", "value", "status"],
+      "properties": {
+        "operator": { "enum": [">=", "<="] },
+        "value": { "type": "number" },
+        "k": { "type": "integer", "minimum": 1 },
+        "status": {
+          "enum": [
+            "pilot_floor_pending_calibration",
+            "pilot_ceiling_pending_calibration",
+            "operational_budget_pending_calibration",
+            "final_calibrated"
+          ]
+        }
+      }
+    }
+  }
+}

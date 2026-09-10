@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.local/schemas/semantic/v1/match-job-request.schema.json",
+  "title": "Match job create request v1",
+  "$ref": "match-job.schema.json#/$defs/request"
+}

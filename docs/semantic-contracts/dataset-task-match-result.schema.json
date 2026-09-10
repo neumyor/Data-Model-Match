@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.local/schemas/semantic/v1/dataset-task-match-result.schema.json",
+  "title": "DatasetTaskMatchResult v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "id", "datasetResourceId", "datasetProfileRevision", "taskProfileId", "taskProfileRevision", "matchingRuleVersion", "weightConfigurationFingerprint", "compatibility", "suitabilityScore", "defaultRankingEligible", "satisfiedRequirements", "matchedPreferences", "conflicts", "unknowns", "explanation", "evidenceRefs", "generatedAt"],
+  "properties": {
+    "version": {"const": 1},
+    "id": {"$ref": "common.schema.json#/$defs/id"},
+    "datasetResourceId": {"$ref": "common.schema.json#/$defs/id"},
+    "datasetProfileRevision": {"$ref": "common.schema.json#/$defs/revision"},
+    "taskProfileId": {"$ref": "common.schema.json#/$defs/id"},
+    "taskProfileRevision": {"$ref": "common.schema.json#/$defs/revision"},
+    "matchingRuleVersion": {"type": "string", "pattern": "^1\\.[0-9]+\\.[0-9]+$"},
+    "weightConfigurationFingerprint": {"$ref": "common.schema.json#/$defs/fingerprint"},
+    "compatibility": {"type": "string", "enum": ["COMPATIBLE", "PARTIALLY_COMPATIBLE", "INCOMPATIBLE", "UNKNOWN"]},
+    "suitabilityScore": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+    "defaultRankingEligible": {"type": "boolean"},
+    "satisfiedRequirements": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+    "matchedPreferences": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+    "conflicts": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+    "unknowns": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+    "explanation": {"type": "string", "minLength": 1, "maxLength": 4096},
+    "evidenceRefs": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/id"}, "uniqueItems": true},
+    "generatedAt": {"$ref": "common.schema.json#/$defs/timestamp"}
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "outcome", "message", "evidenceRefs"],
+      "properties": {
+        "field": {"type": "string", "minLength": 1, "maxLength": 128},
+        "outcome": {"type": "string", "enum": ["SATISFIED", "MATCHED", "CONFLICT", "UNKNOWN", "MISSING"]},
+        "message": {"type": "string", "minLength": 1, "maxLength": 1024},
+        "evidenceRefs": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/id"}, "uniqueItems": true}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"compatibility": {"const": "COMPATIBLE"}}},
+      "then": {
+        "properties": {"suitabilityScore": {"type": "number"}, "defaultRankingEligible": {"const": true}}
+      },
+      "else": {
+        "properties": {"suitabilityScore": {"type": "null"}, "defaultRankingEligible": {"const": false}}
+      }
+    }
+  ]
+}

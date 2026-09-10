@@ -22,7 +22,8 @@
       context: null,
       resource: null,
       status: "idle"
-    }
+    },
+    discovery: { running: false }
   };
   var labels = {
     dataset: { title: "数据集", empty: "还没有数据集。添加 Hugging Face 来源或本地目录，开始建立资源描述。" },
@@ -248,6 +249,9 @@
   function bindDynamicButtons() {
     all("[data-add-kind]").forEach(function (button) { button.onclick = function () { openResourceDrawer(button.dataset.addKind); }; });
     all("[data-detail-id]").forEach(function (button) { button.onclick = function () { openDetail(button.dataset.detailKind, button.dataset.detailId); }; });
+    all("[data-semantic-analyze]").forEach(function (button) {
+      button.onclick = function () { runSemanticAnalysis(button.dataset.semanticAnalyze); };
+    });
     all("[data-use-id]").forEach(function (button) {
       button.onclick = function () {
         switchView("match");
@@ -462,8 +466,73 @@
     $("detailTitle").textContent = "资源详情"; $("detailContent").innerHTML = '<div class="loading-card"><div><span></span>正在读取资源描述</div></div>'; openDrawer("detailDrawer");
     try {
       var response = await request("/api/resources/" + encodeURIComponent(id)), payload = await response.json(), resource = normalizeResource(payload, kind);
+      if (kind === "dataset") {
+        try {
+          var semanticResponse = await request("/api/dataset-semantic-profiles/" + encodeURIComponent(id));
+          var semanticPayload = await semanticResponse.json();
+          resource.semanticProfile = semanticPayload.profile || null;
+        } catch (error) {
+          resource.semanticProfile = null;
+        }
+      }
       state.selectedResource.resource = resource; renderDetail(resource);
     } catch (error) { $("detailContent").innerHTML = '<div class="empty-resource"><div class="empty-state"><span class="empty-symbol">!</span><p>资源详情读取失败：' + escapeHtml(error.message) + "</p></div></div>"; }
+  }
+  async function runSemanticAnalysis(resourceId) {
+    var buttons = all("[data-semantic-analyze]");
+    buttons.forEach(function (button) { button.disabled = true; button.textContent = "分析中…"; });
+    try {
+      var response = await request("/api/dataset-semantic-profiles/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resourceId: resourceId })
+      });
+      var payload = await response.json();
+      if (!payload.profile) throw new Error("服务未返回语义档案");
+      showToast("数据集语义分析已完成");
+      await openDetail("dataset", resourceId);
+    } catch (error) {
+      showToast("语义分析失败：" + error.message);
+    } finally {
+      buttons.forEach(function (button) { button.disabled = false; button.textContent = "生成语义分析"; });
+    }
+  }
+  function semanticProfileSection(profile, resourceId) {
+    if (!profile) {
+      return '<section class="semantic-section semantic-required" data-testid="semantic-details-root"><div class="semantic-heading"><div><p class="overline">数据集语义</p><h3>语义分析未完成</h3></div><span class="status-pill warning" data-testid="semantic-details-profile-status">需要分析</span></div><p class="detail-description">数据集只有在语义分析完成后才可用于任务发现。请重新执行分析。</p><button class="small-button" type="button" data-semantic-analyze="' + escapeHtml(resourceId) + '" data-testid="semantic-details-reanalyze">重新分析</button></section>';
+    }
+    var structural = profile.structural || {}, content = profile.content || {}, analysis = profile.agentAnalysis || {};
+    var capabilities = Array.isArray(analysis.capabilities) ? analysis.capabilities : (structural.tasks || []);
+    var characteristics = Array.isArray(analysis.characteristics) ? analysis.characteristics : [];
+    var limitations = Array.isArray(analysis.limitations) ? analysis.limitations : [];
+    var unknowns = Array.isArray(profile.unresolved) ? profile.unresolved : [];
+    var evidence = Array.isArray(profile.evidence) ? profile.evidence : [];
+    var sampling = profile.sampling || {};
+    var observations = Array.isArray(profile.observations) ? profile.observations : [];
+    var sampledCount = Number(sampling.selectedCount || 0);
+    var observedCount = Number(sampling.successfulObservationCount || 0);
+    var contentText = content.source === "semantic_agent"
+      ? (content.description || profile.semanticDescription || "Agent 未提供内容描述。")
+      : (content.message || content.reason || "尚未获得内容语义。");
+    return '<section class="semantic-section" data-testid="semantic-details-root">' +
+      '<div class="semantic-heading"><div><p class="overline">数据集语义</p><h3>Agent 语义分析</h3></div><span class="status-pill compatible" data-testid="semantic-details-profile-status">已完成</span></div>' +
+      '<p class="semantic-summary">' + escapeHtml(profile.summary || "已生成语义档案") + '</p>' +
+      '<section class="semantic-description" data-testid="semantic-details-content-region"><h4>数据集描述</h4><p>' + escapeHtml(contentText) + '</p></section>' +
+      '<section class="semantic-capabilities" data-testid="semantic-details-structure-region"><h4>可支持的任务</h4>' + semanticList(capabilities, "尚未确认可支持的任务") + '</section>' +
+      '<div class="semantic-facts"><section><h4>数据特征</h4>' + semanticList(characteristics, "尚未形成明确特征") + '</section><section><h4>使用限制</h4>' + semanticList(limitations, "未发现明确限制") + '</section></div>' +
+      '<section class="semantic-sampling" data-testid="semantic-details-sampling-region"><div><h4>样本观察</h4><span>' + escapeHtml(String(sampledCount)) + ' 个样本 · ' + escapeHtml(String(observedCount)) + ' 个有效观察</span></div>' + (observations.length ? '<ul data-testid="semantic-details-sample-observation-list">' + observations.slice(0, 4).map(function (item) { return '<li>' + escapeHtml(observationText(item)) + '</li>'; }).join("") + '</ul>' : '<p>没有可用于视觉观察的样本，Agent 仅使用结构和文档证据。</p>') + '</section>' +
+      '<section class="semantic-evidence" data-testid="semantic-details-evidence-region"><h4>证据与待确认事项</h4>' + (evidence.length ? '<ul class="evidence-list" data-testid="semantic-details-evidence-list">' + evidence.slice(0, 6).map(function (item) { return '<li>' + escapeHtml((item.id ? item.id + " · " : "") + (item.path || "证据") + " · " + (item.detail || item.kind || "")) + '</li>'; }).join("") + '</ul>' : '<p>没有可展示的证据。</p>') + '<h4 class="semantic-subheading">待确认事项</h4>' + semanticList(unknowns, "没有未解决事项", "semantic-details-unresolved-list") + '</section>' +
+      '<button class="text-action semantic-refresh" type="button" data-semantic-analyze="' + escapeHtml(resourceId) + '" data-testid="semantic-details-reanalyze">重新分析</button></section>';
+  }
+  function semanticList(items, emptyText, testId) {
+    var values = Array.isArray(items) ? items.filter(function (item) { return typeof item === "string" && item.trim(); }) : [];
+    return values.length ? '<ul' + (testId ? ' data-testid="' + testId + '"' : "") + '>' + values.map(function (item) { return '<li>' + escapeHtml(item) + '</li>'; }).join("") + '</ul>' : '<p>' + escapeHtml(emptyText) + '</p>';
+  }
+  function observationText(item) {
+    if (!item || typeof item !== "object") return "样本观察格式无效";
+    var categories = Array.isArray(item.objectCategories) ? item.objectCategories.join("、") : "";
+    var environments = Array.isArray(item.environments) ? item.environments.join("、") : "";
+    return [categories, environments, item.targetScale, item.illumination && Array.isArray(item.illumination) ? item.illumination.join("、") : ""].filter(Boolean).join(" · ") || item.status || "已完成样本观察";
   }
   function renderDetail(resource) {
     var profile = profileOf(resource), kind = resource.kind, warnings = warningItems(resource);
@@ -474,13 +543,67 @@
     $("detailTitle").textContent = resource.name || "资源详情";
     $("detailContent").innerHTML = '<div class="detail-title-row"><i class="resource-type-dot ' + (kind === "model" ? "model-dot" : "") + '"></i><div><h3>' + escapeHtml(resource.name || "未命名资源") + '</h3><p>' + escapeHtml(sourceLabel(resource)) + "</p></div><span class=\"status-pill " + statusClass(resource.status) + '">' + statusText(resource.status) + "</span></div>" +
       '<div class="detail-stat-row"><div class="detail-stat"><strong>' + Math.round(completeness(resource) * 100) + '%</strong><small>描述完整度</small></div><div class="detail-stat"><strong>' + (resource.fileCount || "—") + '</strong><small>文件数量</small></div><div class="detail-stat"><strong>' + formatBytes(resource.sizeBytes) + '</strong><small>本地大小</small></div></div>' +
-      '<div class="detail-section"><h4>结构化描述</h4><p class="detail-description">' + escapeHtml(resourceDescription(resource)) + "</p></div>" +
-      '<div class="detail-section"><h4>' + (kind === "dataset" ? "数据特征" : "输入契约") + '</h4>' + (features.length ? '<table class="detail-table"><thead><tr><th>名称</th><th>类型</th><th>角色</th></tr></thead><tbody>' + features.slice(0, 12).map(function (feature) { return "<tr><td>" + escapeHtml(feature.name || "未命名") + "</td><td>" + escapeHtml(feature.dataType || "未知") + "</td><td>" + escapeHtml(feature.semanticRole || (feature.required ? "必填" : "—")) + "</td></tr>"; }).join("") + "</tbody></table>" : '<p class="detail-description">当前描述中还没有可展示的字段契约。</p>') + "</div>" +
-      '<div class="detail-section"><h4>来源与版本</h4><p class="detail-description">' + escapeHtml((resource.resolvedRevision || resource.revision || "版本未固定") + " · 最近更新 " + formatDate(resource.updatedAt)) + "</p></div>" +
+      (kind === "dataset" ? semanticProfileSection(resource.semanticProfile, resource.id) : "") +
+      '<div class="detail-section source-details"><h4>' + (kind === "dataset" ? "原始字段与结构" : "输入契约") + '</h4><p class="detail-description">' + escapeHtml(resourceDescription(resource)) + '</p>' + (features.length ? '<table class="detail-table"><thead><tr><th>名称</th><th>类型</th><th>角色</th></tr></thead><tbody>' + features.slice(0, 12).map(function (feature) { return "<tr><td>" + escapeHtml(feature.name || "未命名") + "</td><td>" + escapeHtml(feature.dataType || "未知") + "</td><td>" + escapeHtml(feature.semanticRole || (feature.required ? "必填" : "—")) + "</td></tr>"; }).join("") + "</tbody></table>" : '<p class="detail-description">当前描述中还没有可展示的字段契约。</p>') + "</div>" +
+      '<div class="detail-section source-details"><h4>来源与版本</h4><p class="detail-description">' + escapeHtml((resource.resolvedRevision || resource.revision || "版本未固定") + " · 最近更新 " + formatDate(resource.updatedAt)) + "</p></div>" +
       (kind === "dataset" && provenance.sourceDatasetName ? '<div class="detail-section provenance-section"><h4>适配来源</h4><div class="provenance-grid"><div><span>来源数据集</span><strong>' + escapeHtml(provenance.sourceDatasetName) + '</strong></div><div><span>适配模型</span><strong>' + escapeHtml(provenance.targetModelName || "—") + '</strong></div><div><span>转换状态</span><strong class="provenance-status">' + escapeHtml(provenance.transformStatus === "completed" ? "已完成" : provenance.transformStatus || "处理中") + "</strong></div></div></div>" : "") +
       '<div class="detail-section"><h4>执行轨迹</h4>' + (trace.length ? '<ul class="evidence-list">' + trace.slice(-10).map(function (item) { return "<li>" + escapeHtml(typeof item === "string" ? item : item.message || item.detail || item.stage || JSON.stringify(item)) + "</li>"; }).join("") + "</ul>" : '<p class="detail-description">暂无导入记录。</p>') + "</div>" +
       (profile.evidence && profile.evidence.length ? '<div class="detail-section"><h4>解析证据</h4><ul class="evidence-list">' + profile.evidence.slice(0, 8).map(function (item) { return "<li>" + escapeHtml(evidenceText(item)) + "</li>"; }).join("") + "</ul></div>" : "") +
       (warnings.length ? '<div class="detail-section"><h4>需要关注</h4><ul class="warning-list">' + warnings.map(function (item) { return "<li>" + escapeHtml(typeof item === "string" ? item : item.message || JSON.stringify(item)) + "</li>"; }).join("") + "</ul></div>" : "");
+    bindDynamicButtons();
+  }
+
+  function renderTaskDiscovery(payload) {
+    var matches = Array.isArray(payload.matches) ? payload.matches : [];
+    $("taskDiscoveryCount").textContent = matches.length + " 个数据集";
+    if (!matches.length) {
+      $("taskDiscoveryResults").innerHTML = '<div class="empty-resource"><div class="empty-state compact"><span class="empty-symbol">○</span><p>当前没有可分析的数据集。</p></div></div>';
+      return;
+    }
+    $("taskDiscoveryResults").innerHTML = matches.map(function (item) {
+      var verdict = ["recommended", "possible", "not_recommended", "unknown"].indexOf(item.verdict) >= 0 ? item.verdict : (item.compatibility === true ? "possible" : item.compatibility === false ? "not_recommended" : "unknown");
+      var verdictLabels = { recommended: "推荐", possible: "可以考虑", not_recommended: "不建议", unknown: "信息不足" };
+      var scoreValue = item.score != null ? Number(item.score) : Number(item.suitabilityScore);
+      var score = Number.isFinite(scoreValue) ? Math.max(0, Math.min(1, scoreValue)) : null;
+      var concerns = Array.isArray(item.concerns) ? item.concerns : (Array.isArray(item.blockers) ? item.blockers : []);
+      var missing = Array.isArray(item.missingInformation) ? item.missingInformation : [];
+      var evidence = Array.isArray(item.evidenceRefs) ? item.evidenceRefs : [];
+      var legacyReasons = Array.isArray(item.compatibilityReasons) ? item.compatibilityReasons : [];
+      var explanation = item.explanation || (verdict === "not_recommended" ? concerns[0] : legacyReasons[0]) || "Agent 未提供额外说明。";
+      var detailItems = concerns.concat(missing.map(function (value) { return "未知：" + value; })).concat(evidence.map(function (value) { return "证据：" + value; }));
+      var statusClassName = verdict === "recommended" ? "compatible" : verdict === "possible" ? "adaptable" : verdict === "not_recommended" ? "blocked" : "neutral";
+      var resultClass = verdict === "not_recommended" ? "incompatible" : verdict === "unknown" ? "unknown" : "compatible";
+      return '<article class="discovery-result ' + resultClass + '" data-testid="task-discovery-result-explanation"><div class="discovery-result-head"><div><span class="resource-kind"><i class="resource-type-dot"></i>数据集</span><h3>' + escapeHtml(item.name || item.resourceId) + '</h3></div><div><span class="status-pill ' + statusClassName + '">' + verdictLabels[verdict] + '</span>' + (score == null ? "" : '<strong class="discovery-score">' + Math.round(score * 100) + '</strong>') + '</div></div><p class="discovery-explanation">' + escapeHtml(explanation) + '</p>' + (detailItems.length ? '<ul class="discovery-details">' + detailItems.slice(0, 8).map(function (value) { return "<li>" + escapeHtml(value) + "</li>"; }).join("") + "</ul>" : "") + '<div class="discovery-result-foot"><span>' + escapeHtml(score == null ? "Agent 未给出数值评分" : "Agent 置信评分 " + Math.round(score * 100) + "%") + '</span><button class="text-action" type="button" data-detail-id="' + escapeHtml(item.resourceId) + '" data-detail-kind="dataset">查看详情</button></div></article>';
+    }).join("");
+    bindDynamicButtons();
+  }
+  async function runTaskDiscovery() {
+    var text = $("taskDiscoveryInput").value.trim();
+    if (!text) { showToast("请先描述目标任务"); return; }
+    if (state.discovery.running) return;
+    state.discovery.running = true;
+    $("runTaskDiscovery").disabled = true;
+    $("runTaskDiscovery").textContent = "分析中…";
+    $("taskDiscoveryStatus").className = "status-pill profiling";
+    $("taskDiscoveryStatus").textContent = "Agent 正在理解任务与数据集";
+    try {
+      var response = await request("/api/dataset-task-matches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: text })
+      });
+      renderTaskDiscovery(await response.json());
+      $("taskDiscoveryStatus").className = "status-pill compatible";
+      $("taskDiscoveryStatus").textContent = "Agent 结论已更新";
+    } catch (error) {
+      $("taskDiscoveryStatus").className = "status-pill failed";
+      $("taskDiscoveryStatus").textContent = "分析失败";
+      showToast("任务匹配失败：" + error.message);
+    } finally {
+      state.discovery.running = false;
+      $("runTaskDiscovery").disabled = false;
+      $("runTaskDiscovery").innerHTML = '查找数据集 <span>→</span>';
+    }
   }
 
   function clearTrace() {
@@ -836,7 +959,7 @@
     all("[data-view]").forEach(function (button) { button.onclick = function () { switchView(button.dataset.view); }; });
     all("[data-view-target]").forEach(function (button) { button.onclick = function () { switchView(button.dataset.viewTarget); }; });
     $("refreshDatasets").onclick = function () { loadResources("dataset"); }; $("refreshModels").onclick = function () { loadResources("model"); };
-    $("openSettings").onclick = function () { openDrawer("settingsDrawer"); loadConfig(); loadWorkspace(); }; $("saveWorkspacePath").onclick = saveWorkspace; $("searchSource").onclick = searchSource; $("importResource").onclick = importResource; $("deleteResource").onclick = deleteSelectedResource; $("runCompatibility").onclick = runCompatibility; $("transformRetry").onclick = handleTransformAction;
+    $("openSettings").onclick = function () { openDrawer("settingsDrawer"); loadConfig(); loadWorkspace(); }; $("saveWorkspacePath").onclick = saveWorkspace; $("searchSource").onclick = searchSource; $("importResource").onclick = importResource; $("deleteResource").onclick = deleteSelectedResource; $("runCompatibility").onclick = runCompatibility; $("runTaskDiscovery").onclick = runTaskDiscovery; $("transformRetry").onclick = handleTransformAction;
     $("sourceTypeSelect").onchange = syncSourceFields; $("chooseLocalFolder").onclick = function () { $("localFolderInput").click(); }; $("localFolderInput").onchange = updateLocalFolderSummary;
     $("datasetSelect").onchange = function () { updateSelectMeta("dataset"); }; $("modelSelect").onchange = function () { updateSelectMeta("model"); };
     all("[data-drawer-kind]").forEach(function (button) { button.onclick = function () { state.drawerKind = button.dataset.drawerKind; all("[data-drawer-kind]").forEach(function (item) { item.classList.toggle("active", item === button); }); $("resourceDrawerTitle").textContent = "添加" + labels[state.drawerKind].title; resetLocalFolderSelection(); configureSourceType(state.drawerKind); }; });

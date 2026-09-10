@@ -1,0 +1,190 @@
+[
+  {
+    "name": "valid-event-dataset-modality",
+    "target": "common.schema.json#/$defs/datasetModality",
+    "valid": true,
+    "instance": "event"
+  },
+  {
+    "name": "invalid-unknown-dataset-modality",
+    "target": "common.schema.json#/$defs/datasetModality",
+    "valid": false,
+    "instance": "radar"
+  },
+  {
+    "name": "valid-dataset-semantic-profile",
+    "target": "dataset-semantic-profile.schema.json",
+    "valid": true,
+    "instance": {
+      "version": 1,
+      "resourceId": "dataset_001",
+      "snapshotRevision": "rev-20260909",
+      "generator": {"profileBuilderVersion": "1.0.0", "samplingPolicyVersion": "1.0.0", "aggregationRuleVersion": "1.0.0", "configurationFingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+      "structuralSemantics": {"tasks": ["multi_object_tracking"], "modalities": ["RGB", "event"], "sampleOrganization": "image_sequence", "temporalStructure": "sequence", "supervision": ["bbox", "track"], "annotationSemantics": ["claim_track_id"], "resourceRoles": ["media", "annotation"], "resourceRelations": ["frame_to_track"]},
+      "contentSemantics": {"objectCategories": ["claim_vehicle"], "environments": ["claim_urban_road"], "viewpoints": ["claim_aerial"], "targetScale": "claim_target_scale", "objectDensity": "claim_density", "occlusion": "claim_occlusion", "illumination": ["claim_daylight"], "cameraMotion": "claim_camera_motion", "targetMotion": "claim_target_motion", "taskSpecificSemantics": [{"task": "multi_object_tracking", "temporalContinuity": "continuous", "motionChallenge": "high"}]},
+      "sampleRefs": [{"id": "sample_001", "kind": "frame", "path": "frames/0001.jpg", "contentHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "videoPath": "videos/a.mp4", "startMs": 0, "endMs": 1000, "frameStart": 0, "frameEnd": 30, "samplingFps": 30}],
+      "observations": [{"id": "observation_001", "sampleRef": "sample_001", "objectCategories": ["vehicle"], "environments": ["urban_road"], "viewpoints": ["aerial"], "targetScale": "small", "objectDensity": "high", "occlusion": "moderate", "illumination": ["daylight"], "cameraMotion": "moving", "targetMotion": "fast", "vlmModel": "vision-model-v1", "configurationFingerprint": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", "status": "COMPLETED", "evidenceRefs": ["evidence_sample_001"]}],
+      "samplingSummary": {"id": "sampling_001", "strategy": "temporal_uniform", "strata": ["video:a"], "candidateCount": 100, "selectedCount": 8, "successfulObservationCount": 8, "failedObservationCount": 0, "coverage": 0.8, "selectionSeed": 20260909, "selectionEvidenceRefs": ["evidence_aggregation_001"]},
+      "claims": [{"id": "claim_vehicle", "field": "objectCategories", "scope": "content", "valueDistribution": {"value": "vehicle", "observationCount": 8, "eligibleObservationCount": 8, "proportion": 1, "isDominant": true, "evidenceRefs": ["evidence_sample_001"]}, "status": "SUPPORTED", "evidenceRefs": ["evidence_sample_001"], "aggregationRef": "sampling_001"}, {"id": "claim_track_id", "field": "annotation.track_id", "scope": "structural", "value": "track_id", "status": "VERIFIED", "evidenceRefs": ["evidence_readme_001"]}, {"id": "claim_urban_road", "field": "environments", "scope": "content", "value": "urban_road", "status": "OBSERVED", "evidenceRefs": ["evidence_sample_001"]}, {"id": "claim_aerial", "field": "viewpoints", "scope": "content", "value": "aerial", "status": "OBSERVED", "evidenceRefs": ["evidence_sample_001"]}, {"id": "claim_target_scale", "field": "targetScale", "scope": "content", "value": "small", "status": "OBSERVED", "evidenceRefs": ["evidence_sample_001"]}, {"id": "claim_density", "field": "objectDensity", "scope": "content", "value": "high", "status": "OBSERVED", "evidenceRefs": ["evidence_sample_001"]}, {"id": "claim_occlusion", "field": "occlusion", "scope": "content", "value": "moderate", "status": "OBSERVED", "evidenceRefs": ["evidence_sample_001"]}, {"id": "claim_daylight", "field": "illumination", "scope": "content", "value": "daylight", "status": "OBSERVED", "evidenceRefs": ["evidence_sample_001"]}, {"id": "claim_camera_motion", "field": "cameraMotion", "scope": "content", "value": "moving", "status": "OBSERVED", "evidenceRefs": ["evidence_sample_001"]}, {"id": "claim_target_motion", "field": "targetMotion", "scope": "content", "value": "fast", "status": "OBSERVED", "evidenceRefs": ["evidence_sample_001"]}],
+      "evidence": [{"id": "evidence_readme_001", "kind": "README", "sourceRef": "readme", "locator": {"kind": "text", "path": "README.md", "lineStart": 10, "lineEnd": 12}, "stage": "structural", "summary": "Track identifiers are documented.", "snapshotRevision": "rev-20260909"}, {"id": "evidence_sample_001", "kind": "sample", "sourceRef": "sample", "locator": {"kind": "sample", "sampleRef": "sample_001"}, "stage": "vision", "summary": "Observation from selected frame.", "snapshotRevision": "rev-20260909"}, {"id": "evidence_aggregation_001", "kind": "aggregation", "sourceRef": "aggregation", "locator": {"kind": "aggregation", "aggregationRef": "sampling_001"}, "stage": "aggregation", "summary": "Deterministic temporal sampling.", "snapshotRevision": "rev-20260909"}],
+      "unresolved": [],
+      "generatedAt": "2026-09-09T12:00:00Z"
+    }
+  },
+  {
+    "name": "invalid-profile-unknown-with-value",
+    "target": "dataset-semantic-profile.schema.json",
+    "valid": false,
+    "instance": {"version": 1}
+  },
+  {
+    "name": "valid-task-profile",
+    "target": "task-semantic-profile.schema.json",
+    "valid": true,
+    "instance": {"version": 1, "id": "task_001", "revision": "task-rev-1", "task": {"value": "multi_object_tracking", "importance": "required"}, "required": {"modalities": ["vision"], "temporalStructure": "sequence", "supervision": ["tracking_ground_truth"]}, "preferred": {"objectCategories": ["vehicle"], "environments": ["urban_road"], "viewpoints": ["aerial"], "targetScale": ["small"], "objectDensity": ["high"], "occlusion": ["frequent"], "illumination": ["daylight"], "cameraMotion": ["moving"], "targetMotion": ["moderate", "fast"], "taskSpecificPreferences": [{"task": "multi_object_tracking", "temporalContinuity": ["continuous"], "motionChallenge": ["high"]}]}, "createdAt": "2026-09-09T12:00:00Z"}
+  },
+  {
+    "name": "valid-task-profile-create-request",
+    "target": "task-profile-create-request.schema.json",
+    "valid": true,
+    "instance": {"version": 1, "id": "task_001", "revision": "task-rev-1", "task": {"value": "multi_object_tracking", "importance": "required"}, "required": {"modalities": ["vision"], "temporalStructure": "sequence", "supervision": ["tracking_ground_truth"]}, "preferred": {"objectCategories": [], "environments": [], "viewpoints": [], "targetScale": [], "objectDensity": [], "occlusion": [], "illumination": [], "cameraMotion": [], "targetMotion": [], "taskSpecificPreferences": []}, "createdAt": "2026-09-09T12:00:00Z"}
+  },
+  {
+    "name": "invalid-task-profile-open-required",
+    "target": "task-semantic-profile.schema.json",
+    "valid": false,
+    "instance": {"version": 1, "id": "task_001", "revision": "r", "task": {"value": "multi_object_tracking", "importance": "required"}, "required": {"modalities": ["vision"], "temporalStructure": "sequence", "supervision": ["tracking_ground_truth"], "guess": true}, "preferred": {"objectCategories": [], "environments": [], "viewpoints": [], "targetScale": [], "objectDensity": [], "occlusion": [], "illumination": [], "cameraMotion": [], "targetMotion": [], "taskSpecificPreferences": []}, "createdAt": "2026-09-09T12:00:00Z"}
+  },
+  {
+    "name": "invalid-task-specific-preference-open-value",
+    "target": "task-semantic-profile.schema.json",
+    "valid": false,
+    "instance": {"version": 1, "id": "task_001", "revision": "r", "task": {"value": "multi_object_tracking", "importance": "required"}, "required": {"modalities": ["vision"], "temporalStructure": "sequence", "supervision": ["tracking_ground_truth"]}, "preferred": {"objectCategories": [], "environments": [], "viewpoints": [], "targetScale": [], "objectDensity": [], "occlusion": [], "illumination": [], "cameraMotion": [], "targetMotion": [], "taskSpecificPreferences": [{"task": "multi_object_tracking", "value": "tracking_occlusion_challenge"}]}, "createdAt": "2026-09-09T12:00:00Z"}
+  },
+  {
+    "name": "valid-compatible-match-result",
+    "target": "dataset-task-match-result.schema.json",
+    "valid": true,
+    "instance": {"version": 1, "id": "match_001", "datasetResourceId": "dataset_001", "datasetProfileRevision": "rev-1", "taskProfileId": "task_001", "taskProfileRevision": "task-rev-1", "matchingRuleVersion": "1.0.0", "weightConfigurationFingerprint": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "compatibility": "COMPATIBLE", "suitabilityScore": 0.84, "defaultRankingEligible": true, "satisfiedRequirements": [{"field": "supervision", "outcome": "SATISFIED", "message": "Track supervision present.", "evidenceRefs": ["evidence_001"]}], "matchedPreferences": [], "conflicts": [], "unknowns": [], "explanation": "Compatible with documented tracking evidence.", "evidenceRefs": ["evidence_001"], "generatedAt": "2026-09-09T12:00:00Z"}
+  },
+  {
+    "name": "invalid-incompatible-score",
+    "target": "dataset-task-match-result.schema.json",
+    "valid": false,
+    "instance": {"version": 1, "id": "match_001", "datasetResourceId": "dataset_001", "datasetProfileRevision": "rev-1", "taskProfileId": "task_001", "taskProfileRevision": "task-rev-1", "matchingRuleVersion": "1.0.0", "weightConfigurationFingerprint": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", "compatibility": "INCOMPATIBLE", "suitabilityScore": 0.1, "defaultRankingEligible": false, "satisfiedRequirements": [], "matchedPreferences": [], "conflicts": [], "unknowns": [], "explanation": "Blocked.", "evidenceRefs": [], "generatedAt": "2026-09-09T12:00:00Z"}
+  },
+  {
+    "name": "valid-profile-job-request",
+    "target": "profile-job-request.schema.json",
+    "valid": true,
+    "instance": {"version": 1, "resourceId": "dataset_001", "snapshotRevision": "rev-1", "profileSchemaVersion": 1, "configurationFingerprint": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "idempotencyKey": "semantic-profile-rev-1"}
+  },
+  {
+    "name": "invalid-profile-job-request-version",
+    "target": "profile-job-request.schema.json",
+    "valid": false,
+    "instance": {"version": 2, "resourceId": "dataset_001", "snapshotRevision": "rev-1", "profileSchemaVersion": 1, "configurationFingerprint": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}
+  },
+  {
+    "name": "valid-profile-job-response",
+    "target": "profile-job-response.schema.json",
+    "valid": true,
+    "instance": {"version": 1, "job": {"jobId": "job_001", "jobType": "profile", "status": "queued", "createdAt": "2026-09-09T12:00:00Z", "updatedAt": "2026-09-09T12:00:00Z", "attempt": 0, "maxAttempts": 2, "idempotencyKey": "key_001"}}
+  },
+  {
+    "name": "invalid-profile-job-response-wrong-type",
+    "target": "profile-job-response.schema.json",
+    "valid": false,
+    "instance": {"version": 1, "job": {"jobId": "job_001", "jobType": "match", "status": "queued", "createdAt": "2026-09-09T12:00:00Z", "updatedAt": "2026-09-09T12:00:00Z", "attempt": 0, "maxAttempts": 2}}
+  },
+  {
+    "name": "valid-profile-job-get-response-pending",
+    "target": "profile-job-get-response.schema.json",
+    "valid": true,
+    "instance": {"version": 1, "job": {"jobId": "job_001", "jobType": "profile", "status": "running", "createdAt": "2026-09-09T12:00:00Z", "updatedAt": "2026-09-09T12:00:00Z", "attempt": 1, "maxAttempts": 2}, "profile": null}
+  },
+  {
+    "name": "valid-profile-job-cancel-response",
+    "target": "profile-job-cancel-response.schema.json",
+    "valid": true,
+    "instance": {"version": 1, "job": {"jobId": "job_001", "jobType": "profile", "status": "cancelled", "createdAt": "2026-09-09T12:00:00Z", "updatedAt": "2026-09-09T12:00:01Z", "attempt": 1, "maxAttempts": 2}}
+  },
+  {
+    "name": "valid-match-job-request",
+    "target": "match-job-request.schema.json",
+    "valid": true,
+    "instance": {"version": 1, "taskProfileId": "task_001", "taskProfileRevision": "r1", "datasetResourceIds": ["dataset_001"], "matchingRuleVersion": "1.0.0", "weightConfigurationFingerprint": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}
+  },
+  {
+    "name": "invalid-match-job-empty-resources",
+    "target": "match-job-request.schema.json",
+    "valid": false,
+    "instance": {"version": 1, "taskProfileId": "task_001", "taskProfileRevision": "r1", "datasetResourceIds": [], "matchingRuleVersion": "1.0.0", "weightConfigurationFingerprint": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}
+  },
+  {
+    "name": "valid-match-job-response",
+    "target": "match-job-response.schema.json",
+    "valid": true,
+    "instance": {"version": 1, "job": {"jobId": "job_002", "jobType": "match", "status": "queued", "createdAt": "2026-09-09T12:00:00Z", "updatedAt": "2026-09-09T12:00:00Z", "attempt": 0, "maxAttempts": 0}}
+  },
+  {
+    "name": "valid-match-job-get-response-pending",
+    "target": "match-job-get-response.schema.json",
+    "valid": true,
+    "instance": {"version": 1, "job": {"jobId": "job_002", "jobType": "match", "status": "running", "createdAt": "2026-09-09T12:00:00Z", "updatedAt": "2026-09-09T12:00:00Z", "attempt": 0, "maxAttempts": 0}, "results": []}
+  },
+  {
+    "name": "invalid-match-job-response-wrong-type",
+    "target": "match-job-response.schema.json",
+    "valid": false,
+    "instance": {"version": 1, "job": {"jobId": "job_002", "jobType": "profile", "status": "queued", "createdAt": "2026-09-09T12:00:00Z", "updatedAt": "2026-09-09T12:00:00Z", "attempt": 0, "maxAttempts": 0}}
+  },
+  {
+    "name": "valid-task-profile-api-response",
+    "target": "task-profile-create-response.schema.json",
+    "valid": true,
+    "instance": {"version": 1, "taskProfile": {"version": 1, "id": "task_001", "revision": "task-rev-1", "task": {"value": "multi_object_tracking", "importance": "required"}, "required": {"modalities": ["vision"], "temporalStructure": "sequence", "supervision": ["tracking_ground_truth"]}, "preferred": {"objectCategories": [], "environments": [], "viewpoints": [], "targetScale": [], "objectDensity": [], "occlusion": [], "illumination": [], "cameraMotion": [], "targetMotion": [], "taskSpecificPreferences": []}, "createdAt": "2026-09-09T12:00:00Z"}}
+  },
+  {
+    "name": "valid-error-envelope",
+    "target": "error-envelope.schema.json",
+    "valid": true,
+    "instance": {"version": 1, "error": {"code": "VLM_TIMEOUT", "message": "Vision request timed out.", "retryable": true, "jobId": "job_001"}}
+  },
+  {
+    "name": "invalid-error-unknown-code",
+    "target": "error-envelope.schema.json",
+    "valid": false,
+    "instance": {"version": 1, "error": {"code": "SECRET_KEY", "message": "no", "retryable": false}}
+  },
+  {
+    "name": "valid-sse-stage-event",
+    "target": "sse-event.schema.json",
+    "valid": true,
+    "instance": {"version": 1, "jobId": "job_001", "eventId": 1, "timestamp": "2026-09-09T12:00:00Z", "eventType": "stage", "data": {"stage": "sampling", "status": "started"}}
+  },
+  {
+    "name": "invalid-sse-unknown-event",
+    "target": "sse-event.schema.json",
+    "valid": false,
+    "instance": {"version": 1, "jobId": "job_001", "eventId": 1, "timestamp": "2026-09-09T12:00:00Z", "eventType": "trace", "data": {}}
+  },
+  {
+    "name": "valid-vlm-configuration",
+    "target": "vlm-configuration.schema.json",
+    "valid": true,
+    "instance": {"version": 1, "provider": "approved-provider", "endpoint": "https://example.invalid/v1/vision", "apiKey": "configured-outside-version-control", "model": "approved-vision-model", "imageInput": {"formats": ["jpeg", "png"], "maxBytes": 10485760}, "videoInput": {"mode": "frames_only", "formats": ["mp4"], "maxBytes": 104857600, "maxDurationMs": 60000}, "limits": {"timeoutMs": 30000, "maxCallsPerStage": 20, "maxCostUsdPerJob": 2.5}, "retry": {"maxAttempts": 2, "baseDelayMs": 500}}
+  },
+  {
+    "name": "invalid-vlm-configuration-open-field",
+    "target": "vlm-configuration.schema.json",
+    "valid": false,
+    "instance": {"version": 1, "provider": "p", "endpoint": "https://example.invalid/v1", "apiKey": "not-a-real-key", "model": "m", "imageInput": {"formats": ["jpeg"], "maxBytes": 1}, "videoInput": {"mode": "frames_only", "formats": [], "maxBytes": 1, "maxDurationMs": 1}, "limits": {"timeoutMs": 1000, "maxCallsPerStage": 1, "maxCostUsdPerJob": 1}, "retry": {"maxAttempts": 0, "baseDelayMs": 100}, "textModelOverride": "forbidden"}
+  },
+  {
+    "name": "invalid-vlm-configuration-native-video",
+    "target": "vlm-configuration.schema.json",
+    "valid": false,
+    "instance": {"version": 1, "provider": "p", "endpoint": "https://example.invalid/v1", "apiKey": "not-a-real-key", "model": "m", "imageInput": {"formats": ["jpeg"], "maxBytes": 1}, "videoInput": {"mode": "native_video", "formats": ["mp4"], "maxBytes": 1, "maxDurationMs": 1}, "limits": {"timeoutMs": 1000, "maxCallsPerStage": 1, "maxCostUsdPerJob": 1}, "retry": {"maxAttempts": 0, "baseDelayMs": 100}}
+  }
+]

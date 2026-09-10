@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.invalid/schemas/governance/change-record-1.json",
+  "title": "Governance contract change record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "changeId",
+    "status",
+    "compatibility",
+    "proposer",
+    "independentReviewer",
+    "mainAgentApprover",
+    "affectedRequirementIds",
+    "affectedArtifacts",
+    "migration",
+    "rollback",
+    "testPlan",
+    "reacceptanceScope"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "changeId": { "type": "string", "pattern": "^CR-[A-Z0-9-]+$" },
+    "status": {
+      "enum": ["PROPOSED", "APPROVED", "IMPLEMENTED", "SUPERSEDED", "REJECTED"]
+    },
+    "compatibility": {
+      "enum": ["COMPATIBLE", "BREAKING", "EMERGENCY"]
+    },
+    "proposer": { "type": "string", "minLength": 1 },
+    "independentReviewer": { "type": "string", "minLength": 1 },
+    "mainAgentApprover": { "type": "string", "minLength": 1 },
+    "affectedRequirementIds": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^(SRC|DER)-[0-9]{2}$" }
+    },
+    "affectedArtifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "currentSha256", "targetVersion"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "currentSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "targetVersion": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "migration": { "type": "string", "minLength": 1 },
+    "rollback": { "type": "string", "minLength": 1 },
+    "testPlan": { "type": "string", "minLength": 1 },
+    "reacceptanceScope": { "type": "string", "minLength": 1 }
+  }
+}

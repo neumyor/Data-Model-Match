@@ -171,6 +171,15 @@ def build_parser() -> argparse.ArgumentParser:
     transform.add_argument("--config", default="config.llm.json")
     transform.add_argument("--timeout", type=float, default=90)
     transform.add_argument("--max-attempts", type=int, default=3)
+    semantic_profile = subparsers.add_parser("semantic-profile")
+    semantic_profile.add_argument("resource_id")
+    semantic_profile.add_argument("--force", action="store_true")
+    semantic_get = subparsers.add_parser("semantic-profile-get")
+    semantic_get.add_argument("resource_id")
+    task_profile = subparsers.add_parser("task-profile")
+    task_profile.add_argument("text")
+    task_match = subparsers.add_parser("dataset-task-match")
+    task_match.add_argument("text")
     return parser
 
 
@@ -209,6 +218,14 @@ def main(argv: List[str] | None = None) -> int:
             return _compatibility(args, store)
         if args.command == "transform-dataset":
             return _transform_dataset(args, store)
+        if args.command == "semantic-profile":
+            return _semantic_profile(args, store)
+        if args.command == "semantic-profile-get":
+            return _semantic_profile_get(args, store)
+        if args.command == "task-profile":
+            return _task_profile(args)
+        if args.command == "dataset-task-match":
+            return _dataset_task_match(args, store)
     except Exception as exc:
         if args.command in {"import", "reprofile", "compatibility", "transform-dataset"}:
             _emit("error", {"code": _error_code(exc), "message": str(exc)})
@@ -283,7 +300,40 @@ def _import(args: argparse.Namespace, store: ResourceStore) -> int:
         local_path=local_path,
         profile_path=f"profiles/{category}/{resource_id}.json",
     )
-    store.save(record, profile_dict)
+    if args.kind == "dataset":
+        from .semantic_runtime import build_semantic_profile
+
+        previous_record = None
+        previous_profile = None
+        try:
+            previous_record = store.get(record.id)
+            previous_profile = store.load_profile(record.id)
+        except KeyError:
+            pass
+        pending_record = replace(record, status="analyzing")
+        store.save(pending_record, profile_dict)
+        _emit("stage", {
+            "stage": "llm",
+            "status": "started",
+            "message": "正在生成数据集语义分析",
+        })
+        try:
+            semantic_profile = build_semantic_profile(store, pending_record.id)
+        except Exception:
+            if previous_record is not None and previous_profile is not None:
+                store.save(previous_record, previous_profile)
+            else:
+                store.delete(pending_record.id)
+            raise
+        store.save(record, profile_dict)
+        _emit("stage", {
+            "stage": "llm",
+            "status": "completed",
+            "message": "数据集语义分析已完成",
+        })
+        profile_dict["semanticProfile"] = semantic_profile
+    else:
+        store.save(record, profile_dict)
     _emit("result", {"resource": record.to_dict(), "profile": profile_dict})
     _emit("end", {"status": "completed"})
     return 0
@@ -405,6 +455,54 @@ def _transform_dataset(args: argparse.Namespace, store: ResourceStore) -> int:
     )
     _emit("result", {"resource": record.to_dict(), "profile": profile})
     _emit("end", {"status": "completed"})
+    return 0
+
+
+def _semantic_profile(args: argparse.Namespace, store: ResourceStore) -> int:
+    from .semantic_runtime import build_semantic_profile
+
+    profile = build_semantic_profile(store, args.resource_id, force=bool(args.force))
+    print(json.dumps({"profile": profile, "status": "completed"}, ensure_ascii=False))
+    return 0
+
+
+def _semantic_profile_get(args: argparse.Namespace, store: ResourceStore) -> int:
+    from .semantic_runtime import get_semantic_profile
+
+    print(json.dumps({"profile": get_semantic_profile(store, args.resource_id)}, ensure_ascii=False))
+    return 0
+
+
+def _task_profile(args: argparse.Namespace) -> int:
+    from .semantic_matching import parse_task
+
+    print(json.dumps({"task": parse_task(args.text)}, ensure_ascii=False))
+    return 0
+
+
+def _dataset_task_match(args: argparse.Namespace, store: ResourceStore) -> int:
+    from .semantic_matching import match_task, parse_task
+    from .semantic_agent import SemanticAgentClient
+    from .semantic_runtime import build_semantic_profile
+
+    task = parse_task(args.text)
+    agent = SemanticAgentClient.from_config()
+    profiles: List[Dict[str, Any]] = []
+    for record in store.list("dataset"):
+        if record.status == "failed":
+            continue
+        profile = build_semantic_profile(store, record.id, agent_client=agent)
+        profile["name"] = record.name
+        profiles.append(profile)
+    matches = match_task(task, profiles, agent)
+    if matches:
+        task["interpretation"] = matches[0]["taskInterpretation"]
+    print(
+        json.dumps(
+            {"task": task, "matches": matches},
+            ensure_ascii=False,
+        )
+    )
     return 0
 
 

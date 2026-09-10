@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.invalid/schemas/semantic-benchmark/ground-truth-1.json",
+  "title": "De-identified semantic benchmark Ground Truth",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "groundTruthId",
+    "manifestId",
+    "datasetId",
+    "version",
+    "annotationProtocol",
+    "annotatorId",
+    "reviewerId",
+    "disputeResolution",
+    "records"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "groundTruthId": { "type": "string", "pattern": "^gt_[a-z0-9_.-]+$" },
+    "manifestId": { "type": "string", "pattern": "^manifest_[a-z0-9_]+$" },
+    "datasetId": { "type": "string", "pattern": "^ds_[a-z0-9_]+$" },
+    "version": { "type": "string", "pattern": "^gt_[a-z0-9_.-]+$" },
+    "annotationProtocol": { "type": "string", "minLength": 1 },
+    "annotatorId": { "type": "string", "pattern": "^annotator_[a-z0-9_]+$" },
+    "reviewerId": { "type": "string", "pattern": "^reviewer_[a-z0-9_]+$" },
+    "disputeResolution": {
+      "type": "string",
+      "enum": ["reviewer_decides", "consensus_required", "adjudication_required"]
+    },
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/record" }
+    }
+  },
+  "$defs": {
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recordId",
+        "scope",
+        "field",
+        "expectedValues",
+        "status",
+        "confidence",
+        "reviewStatus",
+        "rationale"
+      ],
+      "properties": {
+        "recordId": { "type": "string", "pattern": "^gt_record_[a-z0-9_]+$" },
+        "scope": { "enum": ["structural", "content", "task_specific"] },
+        "field": {
+          "enum": [
+            "tasks",
+            "modalities",
+            "sampleOrganization",
+            "temporalStructure",
+            "supervision",
+            "annotationSemantics",
+            "objectCategories",
+            "environments",
+            "viewpoints",
+            "targetScale",
+            "objectDensity",
+            "occlusion",
+            "illumination",
+            "cameraMotion",
+            "targetMotion",
+            "taskSpecificSemantics"
+          ]
+        },
+        "expectedValues": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "status": { "enum": ["VERIFIED", "SUPPORTED", "OBSERVED", "UNKNOWN"] },
+        "unknownReason": {
+          "enum": ["NO_EVIDENCE", "INSUFFICIENT_SAMPLE_COVERAGE", "UNSUPPORTED_MEDIA", "MODEL_FAILURE", "CONFLICTING_EVIDENCE"]
+        },
+        "confidence": { "enum": ["high", "medium", "low"] },
+        "reviewStatus": { "enum": ["single_annotator", "reviewed", "adjudicated"] },
+        "rationale": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "UNKNOWN" } } },
+          "then": { "required": ["unknownReason"] }
+        },
+        {
+          "if": { "properties": { "status": { "enum": ["VERIFIED", "SUPPORTED", "OBSERVED"] } } },
+          "then": { "not": { "required": ["unknownReason"] } }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.invalid/schemas/governance/governance-baseline-1.json",
+  "title": "Dataset-management governance baseline",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "baselineId",
+    "status",
+    "codeRevision",
+    "controlledArtifacts",
+    "contractSurface",
+    "requirementStatusLedger",
+    "freezePrerequisites",
+    "evidenceRequirements",
+    "changeControl"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "baselineId": {
+      "type": "string",
+      "pattern": "^governance_baseline_[a-z0-9_]+$"
+    },
+    "status": {
+      "enum": ["CANDIDATE", "FROZEN", "SUPERSEDED"]
+    },
+    "codeRevision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "controlledArtifacts": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/artifact" }
+    },
+    "contractSurface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "schemaPath", "sha256", "schemaSha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "schemaPath": { "$ref": "#/$defs/path" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "schemaSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "requirementStatusLedger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "schemaPath", "sha256", "schemaSha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "schemaPath": { "$ref": "#/$defs/path" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "schemaSha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "freezePrerequisites": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/pathRequirement" }
+    },
+    "evidenceRequirements": { "$ref": "#/$defs/evidenceRequirements" },
+    "approval": { "$ref": "#/$defs/approval" },
+    "changeControl": { "$ref": "#/$defs/changeControl" }
+  },
+  "$defs": {
+    "path": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "sha256", "requiredForFreeze"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "path": { "$ref": "#/$defs/path" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "requiredForFreeze": { "type": "boolean" }
+      }
+    },
+    "pathRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "reason"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "path": { "$ref": "#/$defs/path" },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "evidenceRequirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phaseExecutionRecords", "workPackagePlans", "workPackageReports"],
+      "properties": {
+        "phaseExecutionRecords": { "$ref": "#/$defs/evidenceSet" },
+        "workPackagePlans": { "$ref": "#/$defs/evidenceSet" },
+        "workPackageReports": { "$ref": "#/$defs/evidenceSet" }
+      }
+    },
+    "evidenceSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiredFields", "records"],
+      "properties": {
+        "requiredFields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9]*$" }
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "path"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "path": { "$ref": "#/$defs/path" }
+            }
+          }
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["approvedAt", "approvedBy", "independentReviewer"],
+      "properties": {
+        "approvedAt": { "type": "string", "minLength": 1 },
+        "approvedBy": { "type": "string", "minLength": 1 },
+        "independentReviewer": { "type": "string", "minLength": 1 }
+      }
+    },
+    "changeControl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recordDirectory", "recordFilenamePattern", "schemaPath"],
+      "properties": {
+        "recordDirectory": { "$ref": "#/$defs/path" },
+        "recordFilenamePattern": {
+          "type": "string",
+          "pattern": "^CR-[A-Z0-9-]+\\\\.json$"
+        },
+        "schemaPath": { "$ref": "#/$defs/path" }
+      }
+    }
+  }
+}

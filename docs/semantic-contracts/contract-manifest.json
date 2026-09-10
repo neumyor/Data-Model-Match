@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "schemas": [
+    {"name": "DatasetSemanticProfile", "schemaRef": "dataset-semantic-profile.schema.json"},
+    {"name": "TaskSemanticProfile", "schemaRef": "task-semantic-profile.schema.json"},
+    {"name": "DatasetTaskMatchResult", "schemaRef": "dataset-task-match-result.schema.json"},
+    {"name": "ProfileJobRequest", "schemaRef": "profile-job-request.schema.json"},
+    {"name": "ProfileJobResponse", "schemaRef": "profile-job-response.schema.json"},
+    {"name": "ProfileJobGetResponse", "schemaRef": "profile-job-get-response.schema.json"},
+    {"name": "ProfileJobCancelResponse", "schemaRef": "profile-job-cancel-response.schema.json"},
+    {"name": "MatchJobRequest", "schemaRef": "match-job-request.schema.json"},
+    {"name": "MatchJobResponse", "schemaRef": "match-job-response.schema.json"},
+    {"name": "MatchJobGetResponse", "schemaRef": "match-job-get-response.schema.json"},
+    {"name": "TaskProfileCreateRequest", "schemaRef": "task-profile-create-request.schema.json"},
+    {"name": "TaskProfileCreateResponse", "schemaRef": "task-profile-create-response.schema.json"},
+    {"name": "ErrorEnvelope", "schemaRef": "error-envelope.schema.json"},
+    {"name": "SseEvent", "schemaRef": "sse-event.schema.json"},
+    {"name": "VlmConfiguration", "schemaRef": "vlm-configuration.schema.json"}
+  ]
+}

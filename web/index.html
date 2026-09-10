@@ -34,6 +34,20 @@
           </div>
           <div id="datasetSummary" class="summary-strip"></div>
           <div id="datasetGrid" class="resource-grid" aria-live="polite"></div>
+          <section class="dataset-discovery" aria-labelledby="discovery-title" data-testid="task-discovery-root">
+            <div class="view-heading compact-heading">
+              <div><p class="overline">数据集管理 / 任务发现</p><h3 id="discovery-title">任务找数据集</h3><p>描述目标任务，Agent 会结合数据集证据理解需求并给出推荐理由。</p></div>
+            </div>
+            <section class="discovery-input">
+              <label class="field-label" for="taskDiscoveryInput">任务描述</label>
+              <textarea id="taskDiscoveryInput" data-testid="task-discovery-query-input" rows="4" placeholder="例如：寻找用于夜间车辆目标检测的视频数据集，需要边界框标注。"></textarea>
+              <div class="discovery-actions"><span id="taskDiscoveryStatus" class="status-pill neutral">等待任务描述</span><button id="runTaskDiscovery" data-testid="task-discovery-run" class="primary-button" type="button">查找数据集 <span>→</span></button></div>
+            </section>
+            <section class="discovery-results">
+              <div class="panel-heading"><div><p class="overline">Agent 推荐结果</p><h3>按语义理解给出结论</h3></div><span id="taskDiscoveryCount" class="muted-count">未开始</span></div>
+              <div id="taskDiscoveryResults" data-testid="task-discovery-ranked-results" class="discovery-result-list"><div class="empty-resource"><div class="empty-state compact"><span class="empty-symbol">○</span><p>输入任务后，Agent 会分析已导入数据集的描述和证据。</p></div></div></div>
+            </section>
+          </section>
         </section>
 
         <section id="view-models" class="view" aria-labelledby="models-title" hidden>
@@ -72,6 +86,7 @@
             </section>
           </div>
         </section>
+
       </main>
       <footer class="footer"><span>数据集与模型匹配</span></footer>
     </div>

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.local/schemas/semantic/v1/profile-job.schema.json",
+  "title": "Dataset semantic profile job API v1",
+  "$defs": {
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "resourceId", "snapshotRevision", "profileSchemaVersion", "configurationFingerprint"],
+      "properties": {
+        "version": {"const": 1},
+        "resourceId": {"$ref": "common.schema.json#/$defs/id"},
+        "snapshotRevision": {"$ref": "common.schema.json#/$defs/revision"},
+        "profileSchemaVersion": {"const": 1},
+        "configurationFingerprint": {"$ref": "common.schema.json#/$defs/fingerprint"},
+        "idempotencyKey": {"type": "string", "minLength": 1, "maxLength": 512}
+      }
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "job"],
+      "properties": {
+        "version": {"const": 1},
+        "job": {
+          "allOf": [
+            {"$ref": "common.schema.json#/$defs/job"},
+            {"properties": {"jobType": {"const": "profile"}}}
+          ]
+        }
+      }
+    },
+    "getResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "job", "profile"],
+      "properties": {
+        "version": {"const": 1},
+        "job": {"allOf": [{"$ref": "common.schema.json#/$defs/job"}, {"properties": {"jobType": {"const": "profile"}}}]},
+        "profile": {"oneOf": [{"$ref": "dataset-semantic-profile.schema.json"}, {"type": "null"}]}
+      }
+    },
+    "cancelResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "job"],
+      "properties": {
+        "version": {"const": 1},
+        "job": {"allOf": [{"$ref": "common.schema.json#/$defs/job"}, {"properties": {"jobType": {"const": "profile"}}}]}
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "pythonArtifact": "python_types.py",
+  "frontendArtifact": "frontend-types.d.ts",
+  "interfaces": [
+    {"name": "DatasetSemanticProfile", "pythonSymbol": "DatasetSemanticProfile", "frontendSymbol": "DatasetSemanticProfile"},
+    {"name": "TaskSemanticProfile", "pythonSymbol": "TaskSemanticProfile", "frontendSymbol": "TaskSemanticProfile"},
+    {"name": "DatasetTaskMatchResult", "pythonSymbol": "DatasetTaskMatchResult", "frontendSymbol": "DatasetTaskMatchResult"},
+    {"name": "ProfileJobRequest", "pythonSymbol": "ProfileJobRequest", "frontendSymbol": "ProfileJobRequest"},
+    {"name": "ProfileJobResponse", "pythonSymbol": "ProfileJobResponse", "frontendSymbol": "ProfileJobResponse"},
+    {"name": "ProfileJobGetResponse", "pythonSymbol": "ProfileJobGetResponse", "frontendSymbol": "ProfileJobGetResponse"},
+    {"name": "ProfileJobCancelResponse", "pythonSymbol": "ProfileJobCancelResponse", "frontendSymbol": "ProfileJobCancelResponse"},
+    {"name": "MatchJobRequest", "pythonSymbol": "MatchJobRequest", "frontendSymbol": "MatchJobRequest"},
+    {"name": "MatchJobResponse", "pythonSymbol": "MatchJobResponse", "frontendSymbol": "MatchJobResponse"},
+    {"name": "MatchJobGetResponse", "pythonSymbol": "MatchJobGetResponse", "frontendSymbol": "MatchJobGetResponse"},
+    {"name": "TaskProfileCreateRequest", "pythonSymbol": "TaskProfileCreateRequest", "frontendSymbol": "TaskProfileCreateRequest"},
+    {"name": "TaskProfileCreateResponse", "pythonSymbol": "TaskProfileCreateResponse", "frontendSymbol": "TaskProfileCreateResponse"},
+    {"name": "ErrorEnvelope", "pythonSymbol": "ErrorEnvelope", "frontendSymbol": "ErrorEnvelope"},
+    {"name": "SseEvent", "pythonSymbol": "SseEvent", "frontendSymbol": "SseEvent"},
+    {"name": "VlmConfiguration", "pythonSymbol": "VlmConfiguration", "frontendSymbol": "VlmConfiguration"}
+  ]
+}

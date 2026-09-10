@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.invalid/schemas/semantic-benchmark/perturbation-rules-1.json",
+  "schemaVersion": 1,
+  "protocolId": "semantic_benchmark_perturbations_v1",
+  "rules": [
+    {
+      "ruleId": "perturbation_none_v1",
+      "kind": "identity_control",
+      "seedPolicy": "no_randomness",
+      "inputScope": "approved_benchmark_input",
+      "preserves": ["all_declared_inputs", "ground_truth"],
+      "changes": [],
+      "mustNotChange": ["dataset_id", "revision", "ground_truth"],
+      "expectedUse": ["RQ1", "RQ2", "RQ3", "RQ4"]
+    },
+    {
+      "ruleId": "perturbation_rename_root_v1",
+      "kind": "rename_root_and_children",
+      "seedPolicy": "manifest_seed_plus_rule_index",
+      "inputScope": "directory_and_relative_paths",
+      "preserves": ["bytes", "annotations", "file_extensions", "relative_relationships"],
+      "changes": ["directory_names", "file_names"],
+      "mustNotChange": ["dataset_id", "revision", "ground_truth"],
+      "expectedUse": ["RQ1"]
+    },
+    {
+      "ruleId": "perturbation_remove_documentation_v1",
+      "kind": "remove_readme_and_description",
+      "seedPolicy": "fixed_seed_from_manifest",
+      "inputScope": "documentation_files_only",
+      "preserves": ["media", "annotations", "directory_structure"],
+      "changes": ["documentation_availability"],
+      "mustNotChange": ["dataset_id", "revision", "ground_truth"],
+      "expectedUse": ["RQ1", "RQ3"]
+    },
+    {
+      "ruleId": "perturbation_add_irrelevant_files_v1",
+      "kind": "add_unrelated_files",
+      "seedPolicy": "fixed_seed_from_manifest",
+      "inputScope": "new_files_outside_annotation_paths",
+      "preserves": ["original_files", "annotations", "ground_truth"],
+      "changes": ["directory_noise"],
+      "mustNotChange": ["dataset_id", "revision", "ground_truth"],
+      "expectedUse": ["RQ1"]
+    },
+    {
+      "ruleId": "perturbation_drop_metadata_v1",
+      "kind": "remove_nonessential_metadata",
+      "seedPolicy": "fixed_seed_from_manifest",
+      "inputScope": "metadata_files_and_optional_fields",
+      "preserves": ["media", "core_annotations"],
+      "changes": ["metadata_completeness"],
+      "mustNotChange": ["dataset_id", "revision", "ground_truth"],
+      "expectedUse": ["RQ1", "RQ3"]
+    },
+    {
+      "ruleId": "perturbation_sample_budget_v1",
+      "kind": "fixed_sample_budget",
+      "seedPolicy": "fixed_seed_from_manifest",
+      "inputScope": "approved_sampling_candidates",
+      "preserves": ["candidate_revision", "ground_truth"],
+      "changes": ["selected_sample_count"],
+      "mustNotChange": ["dataset_id", "revision", "ground_truth"],
+      "expectedUse": ["RQ2"]
+    },
+    {
+      "ruleId": "perturbation_annotation_conflict_v1",
+      "kind": "inject_controlled_annotation_conflict",
+      "seedPolicy": "fixed_seed_from_manifest",
+      "inputScope": "synthetic_evaluation_copy_only",
+      "preserves": ["original_snapshot"],
+      "changes": ["one_labeled_field_in_held_out_copy"],
+      "mustNotChange": ["source_revision", "original_ground_truth"],
+      "expectedUse": ["RQ1", "RQ4"]
+    }
+  ]
+}

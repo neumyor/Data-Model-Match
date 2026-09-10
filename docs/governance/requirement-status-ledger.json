@@ -1,0 +1,307 @@
+{
+  "schemaVersion": 1,
+  "ledgerId": "requirement_status_ledger_dataset_management_v1",
+  "baselineId": "governance_baseline_dataset_management_v1",
+  "requirements": [
+    {
+      "requirementId": "SRC-01",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "MAIN_AGENT",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/dataset-management-ui-phased-acceptance.md", "sha256": "28e38cbd891751b08d2cb3d9f58bd945441de7ceae956b3081cd95c7da99bd1d", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-02",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "WP8_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-requirements-ledger.md", "sha256": "5e4f1bd6ec6bccf2f787408965db17f1710996f8a4bddacad9bd37e474ed2689", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/semantic-benchmark/benchmark-manifest.json", "sha256": null, "state": "BLOCKED"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-03",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "MAIN_AGENT",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/dataset-management-ui-phased-acceptance.md", "sha256": "28e38cbd891751b08d2cb3d9f58bd945441de7ceae956b3081cd95c7da99bd1d", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-04",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "WP8_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-requirements-ledger.md", "sha256": "5e4f1bd6ec6bccf2f787408965db17f1710996f8a4bddacad9bd37e474ed2689", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-05",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "MAIN_AGENT",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/contract-manifest.json", "sha256": "5a21d7dfafb8909307067b7f103937d5ecbbcbcd481d9cf355a868f4bcba4ed5", "state": "VERIFIED"}, {"path": "docs/semantic-contracts/semantic-contract-rfc.md", "sha256": "037b0093ead76511ac2b12f2067f445e13041418f5917056121cc490b3298e98", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-5-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-5-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-06",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "WP5_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/contract-manifest.json", "sha256": "5a21d7dfafb8909307067b7f103937d5ecbbcbcd481d9cf355a868f4bcba4ed5", "state": "VERIFIED"}, {"path": "docs/semantic-contracts/semantic-contract-rfc.md", "sha256": "037b0093ead76511ac2b12f2067f445e13041418f5917056121cc490b3298e98", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-5-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-5-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-07",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "WP5_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/contract-manifest.json", "sha256": "5a21d7dfafb8909307067b7f103937d5ecbbcbcd481d9cf355a868f4bcba4ed5", "state": "VERIFIED"}, {"path": "docs/semantic-contracts/semantic-contract-rfc.md", "sha256": "037b0093ead76511ac2b12f2067f445e13041418f5917056121cc490b3298e98", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-5-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-5-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-08",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "WP2_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/contract-manifest.json", "sha256": "5a21d7dfafb8909307067b7f103937d5ecbbcbcd481d9cf355a868f4bcba4ed5", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-2-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-2-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-09",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "WP3_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/contract-manifest.json", "sha256": "5a21d7dfafb8909307067b7f103937d5ecbbcbcd481d9cf355a868f4bcba4ed5", "state": "VERIFIED"}, {"path": "docs/semantic-contracts/semantic-contract-rfc.md", "sha256": "037b0093ead76511ac2b12f2067f445e13041418f5917056121cc490b3298e98", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-3-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-3-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-10",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "BLOCKED",
+      "owner": "WP4_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/job-runtime-semantics-v1.json", "sha256": "9c16628857b0e2c402da5fba31ab0146487315615b2881421ecd0090dbab5adc", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-4-execution-record.md", "sha256": null, "state": "BLOCKED"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-4-execution-record.md", "sha256": null, "state": "BLOCKED"}]
+    },
+    {
+      "requirementId": "SRC-11",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "BLOCKED",
+      "owner": "WP4_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/job-runtime-semantics-v1.json", "sha256": "9c16628857b0e2c402da5fba31ab0146487315615b2881421ecd0090dbab5adc", "state": "VERIFIED"}, {"path": "docs/semantic-contracts/semantic-contract-rfc.md", "sha256": "037b0093ead76511ac2b12f2067f445e13041418f5917056121cc490b3298e98", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-4-execution-record.md", "sha256": null, "state": "BLOCKED"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-4-execution-record.md", "sha256": null, "state": "BLOCKED"}]
+    },
+    {
+      "requirementId": "SRC-12",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "WP4_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/contract-manifest.json", "sha256": "5a21d7dfafb8909307067b7f103937d5ecbbcbcd481d9cf355a868f4bcba4ed5", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-4-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-4-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-13",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "WP5_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/contract-manifest.json", "sha256": "5a21d7dfafb8909307067b7f103937d5ecbbcbcd481d9cf355a868f4bcba4ed5", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-5-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-5-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-14",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "WP6_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/contract-manifest.json", "sha256": "5a21d7dfafb8909307067b7f103937d5ecbbcbcd481d9cf355a868f4bcba4ed5", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-6-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-6-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-15",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "WP6_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/contract-manifest.json", "sha256": "5a21d7dfafb8909307067b7f103937d5ecbbcbcd481d9cf355a868f4bcba4ed5", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-6-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-6-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-16",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "MAIN_AGENT",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/dataset-management-ui-phased-acceptance.md", "sha256": "28e38cbd891751b08d2cb3d9f58bd945441de7ceae956b3081cd95c7da99bd1d", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-17",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "BLOCKED",
+      "owner": "WP8_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-benchmark/benchmark-manifest.schema.json", "sha256": "dc020c44e07345a06106487423f357b5f3ca90f0d2f1ff7ece9f95ca74cc7f8e", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/semantic-benchmark/benchmark-manifest.json", "sha256": null, "state": "BLOCKED"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "BLOCKED"}]
+    },
+    {
+      "requirementId": "SRC-18",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "MAIN_AGENT",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/dataset-management-ui-phased-acceptance.md", "sha256": "28e38cbd891751b08d2cb3d9f58bd945441de7ceae956b3081cd95c7da99bd1d", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-0-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-0-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-19",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "MAIN_AGENT",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/dataset-management-ui-phased-acceptance.md", "sha256": "28e38cbd891751b08d2cb3d9f58bd945441de7ceae956b3081cd95c7da99bd1d", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-20",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "WP8_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-benchmark/threshold-manifest.json", "sha256": "3d818538ce89f27b5127bfc232a9605146071adb82e252935b16ff2ddd897fde", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-21",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "MAIN_AGENT",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-requirements-ledger.md", "sha256": "5e4f1bd6ec6bccf2f787408965db17f1710996f8a4bddacad9bd37e474ed2689", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-22",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "MAIN_AGENT",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/dataset-management-ui-phased-acceptance.md", "sha256": "28e38cbd891751b08d2cb3d9f58bd945441de7ceae956b3081cd95c7da99bd1d", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "SRC-23",
+      "requirementType": "SOURCE_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "MAIN_AGENT",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-requirements-ledger.md", "sha256": "5e4f1bd6ec6bccf2f787408965db17f1710996f8a4bddacad9bd37e474ed2689", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "DER-01",
+      "requirementType": "DERIVED_PRODUCT_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "MAIN_AGENT",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/contract-manifest.json", "sha256": "5a21d7dfafb8909307067b7f103937d5ecbbcbcd481d9cf355a868f4bcba4ed5", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-1-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-1-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "DER-02",
+      "requirementType": "DERIVED_PRODUCT_REQUIREMENT",
+      "status": "BLOCKED",
+      "owner": "MAIN_AGENT",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/job-runtime-semantics-v1.json", "sha256": "9c16628857b0e2c402da5fba31ab0146487315615b2881421ecd0090dbab5adc", "state": "VERIFIED"}, {"path": "docs/semantic-contracts/semantic-contract-rfc.md", "sha256": "037b0093ead76511ac2b12f2067f445e13041418f5917056121cc490b3298e98", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-1-execution-record.md", "sha256": null, "state": "BLOCKED"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-1-execution-record.md", "sha256": null, "state": "BLOCKED"}]
+    },
+    {
+      "requirementId": "DER-03",
+      "requirementType": "DERIVED_PRODUCT_REQUIREMENT",
+      "status": "PLANNED",
+      "owner": "WP7_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-ui-acceptance/dom-fixture-manifest.json", "sha256": "e6a5317a7f7ee7b430a2d14658c0bc2d384531185c77b22907c468beeda5d946", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "PENDING"}]
+    },
+    {
+      "requirementId": "DER-04",
+      "requirementType": "DERIVED_PRODUCT_REQUIREMENT",
+      "status": "BLOCKED",
+      "owner": "MAIN_AGENT",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/job-runtime-semantics-v1.json", "sha256": "9c16628857b0e2c402da5fba31ab0146487315615b2881421ecd0090dbab5adc", "state": "VERIFIED"}, {"path": "docs/semantic-contracts/semantic-contract-rfc.md", "sha256": "037b0093ead76511ac2b12f2067f445e13041418f5917056121cc490b3298e98", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "BLOCKED"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "BLOCKED"}]
+    },
+    {
+      "requirementId": "DER-05",
+      "requirementType": "DERIVED_PRODUCT_REQUIREMENT",
+      "status": "BLOCKED",
+      "owner": "MAIN_AGENT",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/governance/governance-baseline-plan.md", "sha256": null, "state": "PENDING"}],
+      "outputArtifacts": [{"path": "docs/governance/governance-baseline.json", "sha256": null, "state": "BLOCKED"}],
+      "acceptanceEvidence": [{"path": "docs/governance/governance-baseline.json", "sha256": null, "state": "BLOCKED"}]
+    },
+    {
+      "requirementId": "DER-06",
+      "requirementType": "DERIVED_PRODUCT_REQUIREMENT",
+      "status": "BLOCKED",
+      "owner": "WP6_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-contracts/dataset-task-match-result.schema.json", "sha256": "de96a3b8f48e433195c9a073f73da702ffdc22061badc6f55357d507f23eb304", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-6-execution-record.md", "sha256": null, "state": "BLOCKED"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-6-execution-record.md", "sha256": null, "state": "BLOCKED"}]
+    },
+    {
+      "requirementId": "DER-07",
+      "requirementType": "DERIVED_PRODUCT_REQUIREMENT",
+      "status": "BLOCKED",
+      "owner": "WP8_OWNER",
+      "independentAcceptor": "UNASSIGNED_INDEPENDENT_ACCEPTOR",
+      "inputArtifacts": [{"path": "docs/semantic-requirements-ledger.md", "sha256": "5e4f1bd6ec6bccf2f787408965db17f1710996f8a4bddacad9bd37e474ed2689", "state": "VERIFIED"}],
+      "outputArtifacts": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "BLOCKED"}],
+      "acceptanceEvidence": [{"path": "docs/phase-records/phase-7-execution-record.md", "sha256": null, "state": "BLOCKED"}]
+    }
+  ]
+}

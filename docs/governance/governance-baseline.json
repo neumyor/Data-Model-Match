@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "governance_baseline_dataset_management_v1",
+  "status": "CANDIDATE",
+  "codeRevision": "3ab448b5c3449f4d14287076cc187591f2f8aa92",
+  "controlledArtifacts": [
+    {
+      "id": "phase_acceptance",
+      "path": "docs/dataset-management-ui-phased-acceptance.md",
+      "sha256": "28e38cbd891751b08d2cb3d9f58bd945441de7ceae956b3081cd95c7da99bd1d",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "markdown_requirement_ledger",
+      "path": "docs/semantic-requirements-ledger.md",
+      "sha256": "5e4f1bd6ec6bccf2f787408965db17f1710996f8a4bddacad9bd37e474ed2689",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "docx_conformance_audit",
+      "path": "docs/governance/acceptance-document-audit.md",
+      "sha256": "9c967d637e824ae7c03a301f4d0fae4e30fe27981786f0437b9d816c6170046d",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "contract_manifest",
+      "path": "docs/semantic-contracts/contract-manifest.json",
+      "sha256": "5a21d7dfafb8909307067b7f103937d5ecbbcbcd481d9cf355a868f4bcba4ed5",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "semantic_contract_rfc",
+      "path": "docs/semantic-contracts/semantic-contract-rfc.md",
+      "sha256": "037b0093ead76511ac2b12f2067f445e13041418f5917056121cc490b3298e98",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "schema_catalog",
+      "path": "docs/semantic-contracts/schema-catalog.json",
+      "sha256": "69fdb215e067fb9feb06e4a8e296fc256f9d481206044a0722c5a2027c6c04e4",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "type_parity_manifest",
+      "path": "docs/semantic-contracts/type-parity-manifest.json",
+      "sha256": "5a049e140415e78ce75a2387d5ec05cab75e0111ca6a9c9381b0e8998153e936",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "dataset_task_match_result_schema",
+      "path": "docs/semantic-contracts/dataset-task-match-result.schema.json",
+      "sha256": "de96a3b8f48e433195c9a073f73da702ffdc22061badc6f55357d507f23eb304",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "job_runtime_semantics",
+      "path": "docs/semantic-contracts/job-runtime-semantics-v1.json",
+      "sha256": "9c16628857b0e2c402da5fba31ab0146487315615b2881421ecd0090dbab5adc",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "benchmark_schema",
+      "path": "docs/semantic-benchmark/benchmark-manifest.schema.json",
+      "sha256": "dc020c44e07345a06106487423f357b5f3ca90f0d2f1ff7ece9f95ca74cc7f8e",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "ground_truth_schema",
+      "path": "docs/semantic-benchmark/ground-truth.schema.json",
+      "sha256": "62da72df2e720260bd501cd4339fe0e2403b3b32eb78fa926d7f226c33cb0430",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "threshold_manifest",
+      "path": "docs/semantic-benchmark/threshold-manifest.json",
+      "sha256": "3d818538ce89f27b5127bfc232a9605146071adb82e252935b16ff2ddd897fde",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "ui_acceptance_spec",
+      "path": "docs/semantic-ui-acceptance/UI-ACCEPTANCE-SPEC.md",
+      "sha256": "14fd23630b6abc40627c561c16c340c7b34410f1941aea1c427c89a5e087f07d",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "ui_fixture_manifest",
+      "path": "docs/semantic-ui-acceptance/dom-fixture-manifest.json",
+      "sha256": "e6a5317a7f7ee7b430a2d14658c0bc2d384531185c77b22907c468beeda5d946",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "baseline_schema",
+      "path": "docs/governance/governance-baseline.schema.json",
+      "sha256": "8f7d3bdc5856c74dc3d6ef6b0eeeb410953381957d8e4125c88a757db36f0b1a",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "ownership_schema",
+      "path": "docs/governance/ownership-manifest.schema.json",
+      "sha256": "6b933db0394ab55b7db7b7fbbf0e245581ecbed35825046bf7dddb1113078ec1",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "ownership_manifest",
+      "path": "docs/governance/ownership-manifest.json",
+      "sha256": "cef21bde664f457c6d9fb4063bfc7d2fdd8a305caf91ecd6a66663f4c8412850",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "change_record_schema",
+      "path": "docs/governance/change-record.schema.json",
+      "sha256": "88fc6879be7d61c0501239a0a2f500d967dae5d69517990063ae23d77ad6d64c",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "requirement_status_schema",
+      "path": "docs/governance/requirement-status-ledger.schema.json",
+      "sha256": "594036bea58fe051be551a6aaeded3636665290224a3cb37845d0db46342c1c8",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "requirement_status_ledger",
+      "path": "docs/governance/requirement-status-ledger.json",
+      "sha256": "51abba57a96253d88ac4eec0adcaa04623f21ee8f9397bd1c20affedd8cdacc0",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "frozen_contract_surface_schema",
+      "path": "docs/governance/frozen-contract-surface.schema.json",
+      "sha256": "3c7097e1af5c287045341e61cceea0761cf36313cb5ef40aef430838b80983e8",
+      "requiredForFreeze": true
+    },
+    {
+      "id": "frozen_contract_surface",
+      "path": "docs/governance/frozen-contract-surface.json",
+      "sha256": "01f52609bee4bb8427e5c461a61b75146a510e845c5fe1adc39972bcd28f132a",
+      "requiredForFreeze": true
+    }
+  ],
+  "contractSurface": {
+    "path": "docs/governance/frozen-contract-surface.json",
+    "schemaPath": "docs/governance/frozen-contract-surface.schema.json",
+    "sha256": "01f52609bee4bb8427e5c461a61b75146a510e845c5fe1adc39972bcd28f132a",
+    "schemaSha256": "3c7097e1af5c287045341e61cceea0761cf36313cb5ef40aef430838b80983e8"
+  },
+  "requirementStatusLedger": {
+    "path": "docs/governance/requirement-status-ledger.json",
+    "schemaPath": "docs/governance/requirement-status-ledger.schema.json",
+    "sha256": "51abba57a96253d88ac4eec0adcaa04623f21ee8f9397bd1c20affedd8cdacc0",
+    "schemaSha256": "594036bea58fe051be551a6aaeded3636665290224a3cb37845d0db46342c1c8"
+  },
+  "freezePrerequisites": [
+    {
+      "id": "actual_benchmark_manifest",
+      "path": "docs/semantic-benchmark/benchmark-manifest.json",
+      "reason": "A real de-identified benchmark manifest, not only its template, is required before freeze."
+    },
+    {
+      "id": "phase_zero_signature",
+      "path": "docs/phase-records/phase-0-execution-record.md",
+      "reason": "The Phase 0 execution record must be converted to the required signable field format."
+    },
+    {
+      "id": "governance_baseline_commit",
+      "path": "docs/governance/governance-baseline.json",
+      "reason": "The baseline and every controlled artifact must be committed at codeRevision before FROZEN."
+    }
+  ],
+  "evidenceRequirements": {
+    "phaseExecutionRecords": {
+      "requiredFields": [
+        "phaseId",
+        "status",
+        "requirementSourceSha256",
+        "inputArtifacts",
+        "codeRevision",
+        "workPackageStatus",
+        "responsibleAgent",
+        "independentAcceptor",
+        "verificationCommands",
+        "workDirectory",
+        "startedAt",
+        "finishedAt",
+        "exitCode",
+        "environmentVersion",
+        "configurationFingerprint",
+        "realModelSummary",
+        "sanitizedEvidence",
+        "riskItems",
+        "blockers",
+        "rollbackOrReopen",
+        "approvedAt"
+      ],
+      "records": [
+        {"id": "phase-0", "path": "docs/phase-records/phase-0-execution-record.md"},
+        {"id": "phase-1", "path": "docs/phase-records/phase-1-execution-record.md"},
+        {"id": "phase-2", "path": "docs/phase-records/phase-2-execution-record.md"},
+        {"id": "phase-3", "path": "docs/phase-records/phase-3-execution-record.md"},
+        {"id": "phase-4", "path": "docs/phase-records/phase-4-execution-record.md"},
+        {"id": "phase-5", "path": "docs/phase-records/phase-5-execution-record.md"},
+        {"id": "phase-6", "path": "docs/phase-records/phase-6-execution-record.md"},
+        {"id": "phase-7", "path": "docs/phase-records/phase-7-execution-record.md"}
+      ]
+    },
+    "workPackagePlans": {
+      "requiredFields": [
+        "workPackageId",
+        "phase",
+        "status",
+        "goal",
+        "nonGoals",
+        "sourceRequirementIds",
+        "inputArtifacts",
+        "outputArtifacts",
+        "dependencies",
+        "ownedPaths",
+        "readOnlyPaths",
+        "generatedPaths",
+        "forbiddenPaths",
+        "baseRevision",
+        "responsibleAgent",
+        "modelTier",
+        "verificationCommands",
+        "acceptanceDeliverables",
+        "failureAndRollback",
+        "handoffConsumer"
+      ],
+      "records": [
+        {"id": "WP0", "path": "docs/phase-records/WP0-plan.md"},
+        {"id": "WP1", "path": "docs/phase-records/WP1-plan.md"},
+        {"id": "WP2", "path": "docs/phase-records/WP2-plan.md"},
+        {"id": "WP3", "path": "docs/phase-records/WP3-plan.md"},
+        {"id": "WP4", "path": "docs/phase-records/WP4-plan.md"},
+        {"id": "WP5", "path": "docs/phase-records/WP5-plan.md"},
+        {"id": "WP6", "path": "docs/phase-records/WP6-plan.md"},
+        {"id": "WP7", "path": "docs/phase-records/WP7-plan.md"},
+        {"id": "WP8", "path": "docs/phase-records/WP8-plan.md"}
+      ]
+    },
+    "workPackageReports": {
+      "requiredFields": [
+        "workPackageId",
+        "planPath",
+        "actualRevision",
+        "actualModifiedPaths",
+        "verificationResults",
+        "modelRunSummary",
+        "artifactHashes",
+        "uncoveredItems",
+        "mainAgentReview"
+      ],
+      "records": [
+        {"id": "WP0", "path": "docs/phase-records/WP0-report.md"},
+        {"id": "WP1", "path": "docs/phase-records/WP1-report.md"},
+        {"id": "WP2", "path": "docs/phase-records/WP2-report.md"},
+        {"id": "WP3", "path": "docs/phase-records/WP3-report.md"},
+        {"id": "WP4", "path": "docs/phase-records/WP4-report.md"},
+        {"id": "WP5", "path": "docs/phase-records/WP5-report.md"},
+        {"id": "WP6", "path": "docs/phase-records/WP6-report.md"},
+        {"id": "WP7", "path": "docs/phase-records/WP7-report.md"},
+        {"id": "WP8", "path": "docs/phase-records/WP8-report.md"}
+      ]
+    }
+  },
+  "changeControl": {
+    "recordDirectory": "docs/governance/change-records",
+    "recordFilenamePattern": "CR-[A-Z0-9-]+\\.json",
+    "schemaPath": "docs/governance/change-record.schema.json"
+  }
+}

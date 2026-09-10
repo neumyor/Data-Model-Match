@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.local/schemas/semantic/v1/sse-event.schema.json",
+  "title": "Semantic job SSE event v1",
+  "oneOf": [
+    {"$ref": "#/$defs/stage"},
+    {"$ref": "#/$defs/progress"},
+    {"$ref": "#/$defs/evidence"},
+    {"$ref": "#/$defs/warning"},
+    {"$ref": "#/$defs/result"},
+    {"$ref": "#/$defs/error"},
+    {"$ref": "#/$defs/end"}
+  ],
+  "$defs": {
+    "base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "jobId", "eventId", "timestamp", "eventType", "data"],
+      "properties": {
+        "version": {"const": 1},
+        "jobId": {"$ref": "common.schema.json#/$defs/id"},
+        "eventId": {"type": "integer", "minimum": 1},
+        "timestamp": {"$ref": "common.schema.json#/$defs/timestamp"},
+        "eventType": {"type": "string", "enum": ["stage", "progress", "evidence", "warning", "result", "error", "end"]},
+        "data": true
+      }
+    },
+    "stage": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "properties": {
+            "eventType": {"const": "stage"},
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["stage", "status"],
+              "properties": {
+                "stage": {"type": "string", "enum": ["survey", "inspection", "structural", "sampling", "vision", "aggregation", "fusion", "matching"]},
+                "status": {"type": "string", "enum": ["started", "completed", "skipped"]}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "progress": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "properties": {
+            "eventType": {"const": "progress"},
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["stage", "completed", "total"],
+              "properties": {
+                "stage": {"type": "string", "enum": ["survey", "inspection", "structural", "sampling", "vision", "aggregation", "fusion", "matching"]},
+                "completed": {"type": "integer", "minimum": 0},
+                "total": {"type": "integer", "minimum": 0}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "evidence": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "properties": {
+            "eventType": {"const": "evidence"},
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["evidence"],
+              "properties": {"evidence": {"$ref": "common.schema.json#/$defs/evidence"}}
+            }
+          }
+        }
+      ]
+    },
+    "warning": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "properties": {
+            "eventType": {"const": "warning"},
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["code", "message"],
+              "properties": {
+                "code": {"type": "string", "enum": ["SAMPLE_FAILURE", "INSUFFICIENT_COVERAGE", "UNSUPPORTED_MEDIA", "STALE_REVISION"]},
+                "message": {"type": "string", "minLength": 1, "maxLength": 1024}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "result": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "properties": {
+            "eventType": {"const": "result"},
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["resultType", "resultId"],
+              "properties": {
+                "resultType": {"type": "string", "enum": ["dataset_semantic_profile", "dataset_task_match_result"]},
+                "resultId": {"$ref": "common.schema.json#/$defs/id"}
+              }
+            }
+          }
+        }
+      ]
+    },
+    "error": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "properties": {
+            "eventType": {"const": "error"},
+            "data": {"$ref": "error-envelope.schema.json"}
+          }
+        }
+      ]
+    },
+    "end": {
+      "allOf": [
+        {"$ref": "#/$defs/base"},
+        {
+          "properties": {
+            "eventType": {"const": "end"},
+            "data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["status"],
+              "properties": {
+                "status": {"type": "string", "enum": ["completed", "failed", "cancelled", "superseded", "partially_completed"]},
+                "resultAvailable": {"type": "boolean"}
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

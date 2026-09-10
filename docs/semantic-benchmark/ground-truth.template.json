@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "groundTruthId": "gt_placeholder_v1",
+  "manifestId": "manifest_phase7_pilot",
+  "datasetId": "ds_placeholder_01",
+  "version": "gt_placeholder_v1",
+  "annotationProtocol": "Apply the frozen field-level rubric; record UNKNOWN when evidence is insufficient.",
+  "annotatorId": "annotator_placeholder",
+  "reviewerId": "reviewer_placeholder",
+  "disputeResolution": "reviewer_decides",
+  "records": [
+    {
+      "recordId": "gt_record_placeholder_01",
+      "scope": "structural",
+      "field": "tasks",
+      "expectedValues": ["object_detection"],
+      "status": "UNKNOWN",
+      "unknownReason": "NO_EVIDENCE",
+      "confidence": "low",
+      "reviewStatus": "single_annotator",
+      "rationale": "Placeholder only; replace with a reviewed field-level annotation."
+    },
+    {
+      "recordId": "gt_record_placeholder_02",
+      "scope": "content",
+      "field": "targetScale",
+      "expectedValues": ["UNKNOWN"],
+      "status": "UNKNOWN",
+      "unknownReason": "INSUFFICIENT_SAMPLE_COVERAGE",
+      "confidence": "low",
+      "reviewStatus": "single_annotator",
+      "rationale": "Placeholder only; do not infer content semantics without approved observations."
+    }
+  ]
+}

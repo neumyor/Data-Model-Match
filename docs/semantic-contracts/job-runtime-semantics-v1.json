@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "runtimeSemanticsVersion": "1.0.0",
+  "scope": "semantic_profile_and_match_jobs",
+  "errorDisposition": {
+    "SCHEMA_VALIDATION_FAILED": {"retryable": false, "reason": "request_or_contract_invalid"},
+    "UNSUPPORTED_SCHEMA_VERSION": {"retryable": false, "reason": "request_or_contract_invalid"},
+    "RESOURCE_NOT_FOUND": {"retryable": false, "reason": "resource_not_available"},
+    "SNAPSHOT_NOT_FOUND": {"retryable": false, "reason": "resource_not_available"},
+    "REVISION_CONFLICT": {"retryable": false, "reason": "request_or_contract_invalid"},
+    "PROFILE_NOT_FOUND": {"retryable": false, "reason": "resource_not_available"},
+    "TASK_PROFILE_NOT_FOUND": {"retryable": false, "reason": "resource_not_available"},
+    "JOB_NOT_FOUND": {"retryable": false, "reason": "request_or_contract_invalid"},
+    "JOB_NOT_CANCELLABLE": {"retryable": false, "reason": "request_or_contract_invalid"},
+    "IDEMPOTENCY_KEY_CONFLICT": {"retryable": false, "reason": "request_or_contract_invalid"},
+    "STALE_JOB_SUPERSEDED": {"retryable": false, "reason": "terminal_state"},
+    "VLM_CONFIG_INVALID": {"retryable": false, "reason": "configuration_invalid"},
+    "VLM_UNAVAILABLE": {"retryable": true, "reason": "transient_upstream"},
+    "VLM_TIMEOUT": {"retryable": true, "reason": "transient_upstream"},
+    "VLM_EMPTY_RESPONSE": {"retryable": true, "reason": "transient_upstream_response"},
+    "VLM_INVALID_RESPONSE": {"retryable": true, "reason": "transient_upstream_response"},
+    "UNSUPPORTED_MEDIA": {"retryable": false, "reason": "input_unsupported"},
+    "MEDIA_READ_FAILED": {"retryable": false, "reason": "input_invalid_or_unavailable"},
+    "INSUFFICIENT_EVIDENCE": {"retryable": false, "reason": "semantic_outcome"},
+    "ACCESS_DENIED": {"retryable": false, "reason": "authorization_required"},
+    "RATE_LIMITED": {"retryable": true, "reason": "transient_upstream"},
+    "INTERNAL_ERROR": {"retryable": false, "reason": "requires_diagnosis"}
+  },
+  "attempts": {
+    "attemptFieldMeaning": "count_of_started_execution_attempts",
+    "initialAttempt": 0,
+    "incrementPoint": "durably_increment_when_a_worker_lease_is_acquired",
+    "maxAttemptsFieldMeaning": "maximum_number_of_retries_after_the_initial_attempt",
+    "totalAttemptFormula": "1 + maxAttempts",
+    "retryEligibility": "errorDisposition[error.code].retryable && attempt <= maxAttempts && job_not_cancelled"
+  },
+  "retry": {
+    "algorithm": "deterministic_bounded_exponential_jitter",
+    "baseDelaySource": "config.llm.json.vlm.retry.baseDelayMs",
+    "maximumDelayMs": 60000,
+    "retryOrdinal": "attempt",
+    "unclampedDelayFormula": "baseDelayMs * 2^(retryOrdinal - 1)",
+    "jitterSeed": "sha256(jobId + ':' + retryOrdinal)",
+    "jitterMultiplierFormula": "0.8 + 0.4 * uint32(sha256_prefix_8_hex) / 4294967295",
+    "delayFormula": "min(maximumDelayMs, floor(unclampedDelay * jitterMultiplier))",
+    "retryEvent": "emit the existing retryable error envelope without end; record retryOrdinal/delayMs/errorCode only in private runtime audit data",
+    "noRetryOn": ["cancelled", "completed", "failed", "superseded"]
+  },
+  "cancellation": {
+    "acceptedStates": ["queued", "running", "partially_completed"],
+    "idempotentTerminalState": "cancelled",
+    "winnerRule": "the first durable terminal transition under the job lock wins",
+    "publishRule": "publish rechecks the durable job state and resolvedRevision while holding the job lock; a durable cancellation before this check prevents publication, while a completed durable publish makes later cancellation JOB_NOT_CANCELLABLE",
+    "partialArtifactRule": "completed and failed observation artifacts remain auditable; no partial profile becomes ready"
+  },
+  "workerRecovery": {
+    "leaseStorage": "private_runtime_lease_not_public_job_schema",
+    "leaseDurationSeconds": 60,
+    "renewalIntervalSeconds": 15,
+    "expiryRule": "an expired running lease is reclaimed by one worker under the job lock",
+    "uncertainExternalCallRule": "a lease expiry after durable lease acquisition is treated as one consumed attempt; recovery may retry only under retryEligibility",
+    "preLeaseCrashRule": "a crash before durable lease acquisition may be reclaimed without consuming an attempt",
+    "staleWorkerRule": "completion with a non-current lease token is rejected without publication",
+    "recoveryEvent": "record recovery only in private runtime audit data; external SSE emits no worker identifier or new warning code"
+  },
+  "sseReplay": {
+    "minimumRetentionSeconds": 604800,
+    "eventIdRule": "strictly increasing positive per-job IDs; never reused",
+    "lastEventIdRule": "replay only events with eventId greater than Last-Event-ID",
+    "expiredRetentionRule": "emit a current stage snapshot and require GET job retrieval for final artifacts",
+    "terminalRule": "exactly one end event follows final result or error; no event is legal after end"
+  },
+  "publication": {
+    "protocol": [
+      "write_and_fsync_validated_profile_artifact",
+      "write_and_fsync_published_pointer_if_resolvedRevision_matches",
+      "write_and_fsync_completed_job_record",
+      "append_and_fsync_result_event",
+      "append_and_fsync_end_event"
+    ],
+    "atomicityBoundary": "single process lock plus atomic same-directory replacement for JSON artifacts",
+    "recoveryRule": "startup reconciliation treats a valid pointer and profile artifact for the same job/request as a completed publication, appends only missing terminal events, and never republishes a different profile",
+    "staleRule": "a changed resolvedRevision atomically records superseded and leaves the prior completed pointer unchanged"
+  }
+}

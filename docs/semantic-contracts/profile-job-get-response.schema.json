@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.local/schemas/semantic/v1/profile-job-get-response.schema.json",
+  "title": "Profile job read response v1",
+  "$ref": "profile-job.schema.json#/$defs/getResponse"
+}

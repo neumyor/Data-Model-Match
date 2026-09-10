@@ -1,0 +1,308 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "governance_baseline_dataset_management_v1",
+  "baseRevision": "3ab448b5c3449f4d14287076cc187591f2f8aa92",
+  "sharedPaths": [
+    "src/datamodelmatch/resource_types.py",
+    "src/datamodelmatch/resource_store.py",
+    "src/datamodelmatch/resource_cli.py",
+    "web/server.ts",
+    "web/app.js",
+    "web/index.html",
+    "web/styles.css",
+    "pyproject.toml"
+  ],
+  "globalForbiddenPaths": [
+    "config.llm.json",
+    "_reference_only/**"
+  ],
+  "workPackages": [
+    {
+      "workPackageId": "GOV-BASELINE",
+      "phase": "Governance",
+      "status": "ASSIGNED",
+      "ownedPaths": [
+        "docs/governance/**",
+        "tests/governance/**"
+      ],
+      "readOnlyPaths": [
+        "docs/dataset-management-ui-phased-acceptance.md",
+        "docs/semantic-requirements-ledger.md",
+        "docs/phase-records/**",
+        "docs/semantic-contracts/**",
+        "docs/semantic-benchmark/**",
+        "docs/semantic-ui-acceptance/**"
+      ],
+      "generatedPaths": [],
+      "forbiddenPaths": [
+        "src/**",
+        "web/**",
+        "pyproject.toml",
+        "config.llm.json",
+        "_reference_only/**",
+        "docs/phase-records/**",
+        "docs/semantic-contracts/**",
+        "docs/semantic-benchmark/**",
+        "docs/semantic-ui-acceptance/**"
+      ],
+      "baseRevision": "3ab448b5c3449f4d14287076cc187591f2f8aa92",
+      "responsibleAgent": "MAIN_AGENT",
+      "modelTier": "Terra Medium",
+      "evidencePaths": [
+        "docs/governance/governance-baseline-plan.md",
+        "tests/governance/test_governance_verify.py"
+      ]
+    },
+    {
+      "workPackageId": "WP0",
+      "phase": "Phase 0",
+      "status": "PLANNED",
+      "ownedPaths": [
+        "docs/semantic-contracts/**",
+        "tests/semantic_contracts/**",
+        "docs/semantic-ui-acceptance/UI-ACCEPTANCE-SPEC.md",
+        "docs/semantic-ui-acceptance/dom-fixture-manifest.json",
+        "tests/semantic_ui_acceptance/test_manifest.test.mjs",
+        "docs/semantic-benchmark/benchmark-manifest.schema.json",
+        "docs/semantic-benchmark/ground-truth.schema.json",
+        "docs/semantic-benchmark/benchmark-manifest.template.json",
+        "docs/semantic-benchmark/ground-truth.template.json",
+        "docs/semantic-benchmark/perturbation-rules.json",
+        "docs/semantic-benchmark/threshold-manifest.json"
+      ],
+      "readOnlyPaths": [
+        "docs/dataset-management-ui-phased-acceptance.md",
+        "docs/semantic-requirements-ledger.md"
+      ],
+      "generatedPaths": [],
+      "forbiddenPaths": [
+        "src/**",
+        "web/**",
+        "pyproject.toml",
+        "config.llm.json",
+        "_reference_only/**",
+        "docs/governance/**"
+      ],
+      "baseRevision": "3ab448b5c3449f4d14287076cc187591f2f8aa92",
+      "responsibleAgent": "WP0_OWNER",
+      "modelTier": "Terra Medium",
+      "evidencePaths": ["docs/phase-records/WP0-plan.md", "docs/phase-records/WP0-report.md"]
+    },
+    {
+      "workPackageId": "WP1",
+      "phase": "Phase 1",
+      "status": "PLANNED",
+      "ownedPaths": [
+        "src/datamodelmatch/semantic_types.py",
+        "src/datamodelmatch/semantic_store.py",
+        "tests/test_semantic_store.py"
+      ],
+      "readOnlyPaths": ["docs/semantic-contracts/**"],
+      "generatedPaths": [],
+      "forbiddenPaths": [
+        "src/datamodelmatch/resource_types.py",
+        "src/datamodelmatch/resource_store.py",
+        "src/datamodelmatch/resource_cli.py",
+        "web/**",
+        "pyproject.toml",
+        "config.llm.json",
+        "_reference_only/**",
+        "docs/governance/**"
+      ],
+      "baseRevision": "3ab448b5c3449f4d14287076cc187591f2f8aa92",
+      "responsibleAgent": "WP1_OWNER",
+      "modelTier": "Terra Medium",
+      "evidencePaths": ["docs/phase-records/WP1-plan.md", "docs/phase-records/WP1-report.md"]
+    },
+    {
+      "workPackageId": "WP2",
+      "phase": "Phase 2",
+      "status": "PLANNED",
+      "ownedPaths": [
+        "src/datamodelmatch/semantic_survey.py",
+        "src/datamodelmatch/semantic_inspection.py",
+        "tests/test_semantic_survey.py",
+        "tests/test_semantic_inspection.py"
+      ],
+      "readOnlyPaths": ["docs/semantic-contracts/**", "src/datamodelmatch/dataset_resources.py"],
+      "generatedPaths": [],
+      "forbiddenPaths": [
+        "src/datamodelmatch/resource_types.py",
+        "src/datamodelmatch/resource_store.py",
+        "src/datamodelmatch/resource_cli.py",
+        "web/**",
+        "pyproject.toml",
+        "config.llm.json",
+        "_reference_only/**",
+        "docs/governance/**"
+      ],
+      "baseRevision": "3ab448b5c3449f4d14287076cc187591f2f8aa92",
+      "responsibleAgent": "WP2_OWNER",
+      "modelTier": "Luna Medium",
+      "evidencePaths": ["docs/phase-records/WP2-plan.md", "docs/phase-records/WP2-report.md"]
+    },
+    {
+      "workPackageId": "WP3",
+      "phase": "Phase 3",
+      "status": "PLANNED",
+      "ownedPaths": [
+        "src/datamodelmatch/semantic_structural.py",
+        "tests/test_semantic_structural.py"
+      ],
+      "readOnlyPaths": ["docs/semantic-contracts/**", "src/datamodelmatch/semantic_inspection.py"],
+      "generatedPaths": [],
+      "forbiddenPaths": [
+        "src/datamodelmatch/resource_types.py",
+        "src/datamodelmatch/resource_store.py",
+        "src/datamodelmatch/resource_cli.py",
+        "web/**",
+        "pyproject.toml",
+        "config.llm.json",
+        "_reference_only/**",
+        "docs/governance/**"
+      ],
+      "baseRevision": "3ab448b5c3449f4d14287076cc187591f2f8aa92",
+      "responsibleAgent": "WP3_OWNER",
+      "modelTier": "Terra Medium",
+      "evidencePaths": ["docs/phase-records/WP3-plan.md", "docs/phase-records/WP3-report.md"]
+    },
+    {
+      "workPackageId": "WP4",
+      "phase": "Phase 4",
+      "status": "PLANNED",
+      "ownedPaths": [
+        "src/datamodelmatch/semantic_sampling.py",
+        "src/datamodelmatch/semantic_vision.py",
+        "src/datamodelmatch/semantic_aggregation.py",
+        "tests/test_semantic_sampling.py",
+        "tests/test_semantic_vision.py",
+        "tests/test_semantic_aggregation.py"
+      ],
+      "readOnlyPaths": ["docs/semantic-contracts/**", "src/datamodelmatch/semantic_survey.py"],
+      "generatedPaths": [".datamodelmatch/semantic-vlm/**"],
+      "forbiddenPaths": [
+        "src/datamodelmatch/resource_types.py",
+        "src/datamodelmatch/resource_store.py",
+        "src/datamodelmatch/resource_cli.py",
+        "web/**",
+        "pyproject.toml",
+        "config.llm.json",
+        "_reference_only/**",
+        "docs/governance/**"
+      ],
+      "baseRevision": "3ab448b5c3449f4d14287076cc187591f2f8aa92",
+      "responsibleAgent": "WP4_OWNER",
+      "modelTier": "Terra Medium",
+      "evidencePaths": ["docs/phase-records/WP4-plan.md", "docs/phase-records/WP4-report.md"]
+    },
+    {
+      "workPackageId": "WP5",
+      "phase": "Phase 5",
+      "status": "PLANNED",
+      "ownedPaths": [
+        "src/datamodelmatch/semantic_evidence.py",
+        "src/datamodelmatch/semantic_fusion.py",
+        "tests/test_semantic_evidence.py",
+        "tests/test_semantic_fusion.py"
+      ],
+      "readOnlyPaths": ["docs/semantic-contracts/**", "src/datamodelmatch/semantic_aggregation.py"],
+      "generatedPaths": [],
+      "forbiddenPaths": [
+        "src/datamodelmatch/resource_types.py",
+        "src/datamodelmatch/resource_store.py",
+        "src/datamodelmatch/resource_cli.py",
+        "web/**",
+        "pyproject.toml",
+        "config.llm.json",
+        "_reference_only/**",
+        "docs/governance/**"
+      ],
+      "baseRevision": "3ab448b5c3449f4d14287076cc187591f2f8aa92",
+      "responsibleAgent": "WP5_OWNER",
+      "modelTier": "Terra Medium",
+      "evidencePaths": ["docs/phase-records/WP5-plan.md", "docs/phase-records/WP5-report.md"]
+    },
+    {
+      "workPackageId": "WP6",
+      "phase": "Phase 6",
+      "status": "PLANNED",
+      "ownedPaths": [
+        "src/datamodelmatch/semantic_task.py",
+        "src/datamodelmatch/semantic_matching.py",
+        "tests/test_semantic_task.py",
+        "tests/test_semantic_matching.py"
+      ],
+      "readOnlyPaths": ["docs/semantic-contracts/**", "src/datamodelmatch/semantic_fusion.py"],
+      "generatedPaths": [],
+      "forbiddenPaths": [
+        "src/datamodelmatch/resource_types.py",
+        "src/datamodelmatch/resource_store.py",
+        "src/datamodelmatch/resource_cli.py",
+        "web/**",
+        "pyproject.toml",
+        "config.llm.json",
+        "_reference_only/**",
+        "docs/governance/**"
+      ],
+      "baseRevision": "3ab448b5c3449f4d14287076cc187591f2f8aa92",
+      "responsibleAgent": "WP6_OWNER",
+      "modelTier": "Terra Medium",
+      "evidencePaths": ["docs/phase-records/WP6-plan.md", "docs/phase-records/WP6-report.md"]
+    },
+    {
+      "workPackageId": "WP7",
+      "phase": "Phase 7",
+      "status": "PLANNED",
+      "ownedPaths": [
+        "web/semantic-profile.js",
+        "web/task-discovery.js",
+        "tests/semantic_ui_acceptance/e2e/**",
+        "tests/semantic_api/**"
+      ],
+      "readOnlyPaths": ["docs/semantic-contracts/**", "docs/semantic-ui-acceptance/**"],
+      "generatedPaths": [".datamodelmatch/ui-acceptance/**"],
+      "forbiddenPaths": [
+        "src/datamodelmatch/resource_types.py",
+        "src/datamodelmatch/resource_store.py",
+        "src/datamodelmatch/resource_cli.py",
+        "web/server.ts",
+        "web/app.js",
+        "web/index.html",
+        "web/styles.css",
+        "pyproject.toml",
+        "config.llm.json",
+        "_reference_only/**",
+        "docs/governance/**"
+      ],
+      "baseRevision": "3ab448b5c3449f4d14287076cc187591f2f8aa92",
+      "responsibleAgent": "WP7_OWNER",
+      "modelTier": "Terra Medium",
+      "evidencePaths": ["docs/phase-records/WP7-plan.md", "docs/phase-records/WP7-report.md"]
+    },
+    {
+      "workPackageId": "WP8",
+      "phase": "Phase 7",
+      "status": "PLANNED",
+      "ownedPaths": [
+        "docs/semantic-benchmark/benchmark-manifest.json",
+        "docs/semantic-benchmark/ground-truth/**",
+        "docs/semantic-benchmark/benchmark-reports/**",
+        "tests/semantic_benchmark/**"
+      ],
+      "readOnlyPaths": ["docs/semantic-benchmark/benchmark-manifest.schema.json", "docs/semantic-benchmark/ground-truth.schema.json"],
+      "generatedPaths": [".datamodelmatch/semantic-benchmark/**"],
+      "forbiddenPaths": [
+        "src/**",
+        "web/**",
+        "pyproject.toml",
+        "config.llm.json",
+        "_reference_only/**",
+        "docs/governance/**"
+      ],
+      "baseRevision": "3ab448b5c3449f4d14287076cc187591f2f8aa92",
+      "responsibleAgent": "WP8_OWNER",
+      "modelTier": "Terra Medium",
+      "evidencePaths": ["docs/phase-records/WP8-plan.md", "docs/phase-records/WP8-report.md"]
+    }
+  ]
+}

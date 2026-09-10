@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.local/schemas/semantic/v1/task-semantic-profile.schema.json",
+  "title": "TaskSemanticProfile v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "id", "revision", "task", "required", "preferred", "createdAt"],
+  "properties": {
+    "version": {"const": 1},
+    "id": {"$ref": "common.schema.json#/$defs/id"},
+    "revision": {"$ref": "common.schema.json#/$defs/revision"},
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "importance"],
+      "properties": {
+        "value": {"$ref": "common.schema.json#/$defs/taskFamily"},
+        "importance": {"const": "required"}
+      }
+    },
+    "required": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modalities", "temporalStructure", "supervision"],
+      "properties": {
+        "modalities": {"type": "array", "minItems": 1, "items": {"type": "string", "enum": ["vision", "RGB", "infrared", "depth", "thermal", "multimodal", "event"]}, "uniqueItems": true},
+        "temporalStructure": {"type": "string", "enum": ["none", "sequence", "video", "mixed"]},
+        "supervision": {"type": "array", "minItems": 1, "items": {"type": "string", "enum": ["classification_ground_truth", "detection_ground_truth", "tracking_ground_truth", "semantic_segmentation_ground_truth", "instance_segmentation_ground_truth", "keypoints_ground_truth", "action_ground_truth", "anomaly_ground_truth", "identity_ground_truth", "ranking_ground_truth"]}, "uniqueItems": true}
+      }
+    },
+    "preferred": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["objectCategories", "environments", "viewpoints", "targetScale", "objectDensity", "occlusion", "illumination", "cameraMotion", "targetMotion", "taskSpecificPreferences"],
+      "properties": {
+        "objectCategories": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 128}, "uniqueItems": true},
+        "environments": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 128}, "uniqueItems": true},
+        "viewpoints": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 128}, "uniqueItems": true},
+        "targetScale": {"type": "array", "items": {"type": "string", "enum": ["tiny", "small", "medium", "large", "mixed"]}, "uniqueItems": true},
+        "objectDensity": {"type": "array", "items": {"type": "string", "enum": ["low", "medium", "high", "mixed"]}, "uniqueItems": true},
+        "occlusion": {"type": "array", "items": {"type": "string", "enum": ["rare", "moderate", "frequent"]}, "uniqueItems": true},
+        "illumination": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 128}, "uniqueItems": true},
+        "cameraMotion": {"type": "array", "items": {"type": "string", "enum": ["static", "moving"]}, "uniqueItems": true},
+        "targetMotion": {"type": "array", "items": {"type": "string", "enum": ["slow", "moderate", "fast", "mixed"]}, "uniqueItems": true},
+        "taskSpecificPreferences": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/taskSpecificPreference"}
+        }
+      }
+    },
+    "createdAt": {"$ref": "common.schema.json#/$defs/timestamp"}
+  },
+  "$defs": {
+    "taskSpecificPreference": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["task", "longTail", "domainFeatures"], "properties": {"task": {"const": "image_classification"}, "longTail": {"type": "array", "items": {"type": "string", "enum": ["low", "moderate", "high"]}, "uniqueItems": true}, "domainFeatures": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 128}, "uniqueItems": true}}},
+        {"type": "object", "additionalProperties": false, "required": ["task", "scaleDistribution", "occlusion"], "properties": {"task": {"const": "object_detection"}, "scaleDistribution": {"type": "array", "items": {"type": "string", "enum": ["small_target_heavy", "balanced", "large_target_heavy"]}, "uniqueItems": true}, "occlusion": {"type": "array", "items": {"type": "string", "enum": ["rare", "moderate", "frequent"]}, "uniqueItems": true}}},
+        {"type": "object", "additionalProperties": false, "required": ["task", "temporalContinuity", "motionChallenge"], "properties": {"task": {"const": "multi_object_tracking"}, "temporalContinuity": {"type": "array", "items": {"type": "string", "enum": ["sparse", "continuous"]}, "uniqueItems": true}, "motionChallenge": {"type": "array", "items": {"type": "string", "enum": ["low", "moderate", "high"]}, "uniqueItems": true}}},
+        {"type": "object", "additionalProperties": false, "required": ["task", "boundaryComplexity", "smallObjectRatio"], "properties": {"task": {"enum": ["semantic_segmentation", "instance_segmentation"]}, "boundaryComplexity": {"type": "array", "items": {"type": "string", "enum": ["low", "moderate", "high"]}, "uniqueItems": true}, "smallObjectRatio": {"type": "array", "items": {"type": "string", "enum": ["low", "moderate", "high"]}, "uniqueItems": true}}},
+        {"type": "object", "additionalProperties": false, "required": ["task", "keypointVisibility", "viewpointChallenge"], "properties": {"task": {"const": "pose_keypoints"}, "keypointVisibility": {"type": "array", "items": {"type": "string", "enum": ["low", "moderate", "high"]}, "uniqueItems": true}, "viewpointChallenge": {"type": "array", "items": {"type": "string", "enum": ["low", "moderate", "high"]}, "uniqueItems": true}}},
+        {"type": "object", "additionalProperties": false, "required": ["task", "actionTypes", "temporalDynamics"], "properties": {"task": {"const": "action_video_understanding"}, "actionTypes": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 128}, "uniqueItems": true}, "temporalDynamics": {"type": "array", "items": {"type": "string", "enum": ["low", "moderate", "high"]}, "uniqueItems": true}}},
+        {"type": "object", "additionalProperties": false, "required": ["task", "anomalyTypes", "temporalSparsity"], "properties": {"task": {"const": "video_anomaly_detection"}, "anomalyTypes": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 128}, "uniqueItems": true}, "temporalSparsity": {"type": "array", "items": {"type": "string", "enum": ["low", "moderate", "high"]}, "uniqueItems": true}}},
+        {"type": "object", "additionalProperties": false, "required": ["task", "identityDiversity", "crossCameraVariation", "crossDomainVariation"], "properties": {"task": {"const": "reid_retrieval"}, "identityDiversity": {"type": "array", "items": {"type": "string", "enum": ["low", "moderate", "high"]}, "uniqueItems": true}, "crossCameraVariation": {"type": "array", "items": {"type": "string", "enum": ["low", "moderate", "high"]}, "uniqueItems": true}, "crossDomainVariation": {"type": "array", "items": {"type": "string", "enum": ["low", "moderate", "high"]}, "uniqueItems": true}}}
+      ]
+    }
+  }
+}

@@ -1,0 +1,675 @@
+{
+  "schemaVersion": 1,
+  "contractStatus": "phase-0-frozen-2026-09-09",
+  "scope": {
+    "application": "native HTML/CSS/JavaScript resource workbench",
+    "targetWorkflows": [
+      "semantic-profile-details-review",
+      "task-driven-dataset-discovery"
+    ],
+    "existingWorkflowProtection": [
+      "dataset-management",
+      "model-management",
+      "dataset-to-model-compatibility"
+    ]
+  },
+  "automation": {
+    "phase0Validator": {
+      "command": "bun test tests/semantic_ui_acceptance/test_manifest.test.mjs",
+      "requiresNetwork": false,
+      "requiresRealApi": false
+    },
+    "phase7BrowserHarness": {
+      "status": "required-not-installed-at-phase-0",
+      "runner": "approved pinned Playwright-compatible browser runner invoked by Bun",
+      "serverCommand": "cd web && bun run start",
+      "baseUrl": "http://127.0.0.1:3000",
+      "fixtureMode": "test-only deterministic fixture seam",
+      "networkPolicy": "block external network; allow only the local test server",
+      "requiredCapabilities": [
+        "desktop and mobile viewport emulation",
+        "keyboard input and focused-element inspection",
+        "accessibility role and accessible-name inspection",
+        "DOM locator assertions",
+        "SSE disconnect and reconnect simulation",
+        "full-page and element screenshot capture",
+        "pixel comparison and failure artifact writing"
+      ],
+      "passCondition": "The browser harness is installed, version-pinned, and runs every manifest scenario. Its absence blocks visual acceptance."
+    }
+  },
+  "viewports": [
+    {
+      "id": "desktop-1440x1100",
+      "width": 1440,
+      "height": 1100,
+      "deviceScaleFactor": 1,
+      "isMobile": false
+    },
+    {
+      "id": "mobile-390x844",
+      "width": 390,
+      "height": 844,
+      "deviceScaleFactor": 2,
+      "isMobile": true
+    }
+  ],
+  "visualRegression": {
+    "baselineRoot": "tests/semantic_ui_acceptance/baselines",
+    "failureArchiveRoot": ".datamodelmatch/ui-acceptance",
+    "archiveLayout": "<run-id>/<scenario-id>/<viewport-id>/{actual.png,expected.png,diff.png,report.json,dom.html}",
+    "comparison": {
+      "algorithm": "pixelmatch-compatible RGBA comparison",
+      "antiAliasHandling": "ignore anti-aliased edge pixels only",
+      "perPixelColorDistanceThreshold": 0.1,
+      "maximumMismatchedPixelRatio": 0.002,
+      "maximumMismatchedPixels": 800,
+      "maskPolicy": "No masks for application content. Only the test-run timestamp and browser-owned caret blink may be disabled or normalized before capture."
+    },
+    "baselinePolicy": [
+      "Baselines are version-controlled PNG files created only from an approved deterministic fixture run.",
+      "A baseline update requires the Phase 0 change-control record or an approved UI change record that names all affected scenario and viewport pairs.",
+      "Failure archives are Git-ignored operational evidence and must be retained for the release review.",
+      "Screenshots, DOM captures, and reports must redact API keys, Authorization headers, raw sensitive media, and full model prompts or responses."
+    ]
+  },
+  "fixtureContract": {
+    "delivery": "The UI exposes a test-only deterministic fixture seam selected before application bootstrap. Production builds must not activate a fixture from a URL, local storage, or server response.",
+    "dataRequirements": [
+      "Fixtures use synthetic resource IDs, relative paths, evidence summaries, and generated thumbnail placeholders only.",
+      "Fixtures must never invoke real LLM, VLM, external HTTP, or local filesystem scanning.",
+      "Each fixture supplies a fixed snapshotRevision, profile revision, task profile revision, event sequence, timestamps, and ordering.",
+      "Each fixture supplies enough data to render its declared selectors without a loading race."
+    ],
+    "states": [
+      "not_started",
+      "queued",
+      "running",
+      "partially_completed",
+      "completed",
+      "failed",
+      "cancelled",
+      "superseded_old_revision",
+      "forbidden",
+      "unsupported_media",
+      "no_samples",
+      "unknown",
+      "conflict",
+      "incompatible",
+      "sse_reconnected"
+    ]
+  },
+  "selectors": [
+    {
+      "id": "semantic-details-root",
+      "selector": "[data-testid=\"semantic-details-root\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "Semantic profile details surface for a selected dataset and snapshot."
+    },
+    {
+      "id": "semantic-details-profile-status",
+      "selector": "[data-testid=\"semantic-details-profile-status\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "Current semantic profile lifecycle state and revision."
+    },
+    {
+      "id": "semantic-details-reanalyze",
+      "selector": "[data-testid=\"semantic-details-reanalyze\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "Start semantic profile generation for the displayed snapshot."
+    },
+    {
+      "id": "semantic-details-cancel",
+      "selector": "[data-testid=\"semantic-details-cancel\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "Cancel the active semantic profile job when cancellation is allowed."
+    },
+    {
+      "id": "semantic-details-retry",
+      "selector": "[data-testid=\"semantic-details-retry\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "Retry a terminal retryable failure without replacing the last complete profile."
+    },
+    {
+      "id": "semantic-details-structure-region",
+      "selector": "[data-testid=\"semantic-details-structure-region\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "Fixed review region: structural semantics."
+    },
+    {
+      "id": "semantic-details-content-region",
+      "selector": "[data-testid=\"semantic-details-content-region\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "Fixed review region: content semantics."
+    },
+    {
+      "id": "semantic-details-sampling-region",
+      "selector": "[data-testid=\"semantic-details-sampling-region\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "Fixed review region: samples and aggregation."
+    },
+    {
+      "id": "semantic-details-evidence-region",
+      "selector": "[data-testid=\"semantic-details-evidence-region\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "Fixed review region: evidence and unresolved items."
+    },
+    {
+      "id": "semantic-details-claim-list",
+      "selector": "[data-testid=\"semantic-details-claim-list\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "List of field-level claims with value, evidence status, and provenance."
+    },
+    {
+      "id": "semantic-details-sample-observation-list",
+      "selector": "[data-testid=\"semantic-details-sample-observation-list\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "Sample-level observations, visually distinct from aggregated claims."
+    },
+    {
+      "id": "semantic-details-evidence-list",
+      "selector": "[data-testid=\"semantic-details-evidence-list\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "Evidence references and locators."
+    },
+    {
+      "id": "semantic-details-unresolved-list",
+      "selector": "[data-testid=\"semantic-details-unresolved-list\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "UNKNOWN fields, reasons, attempted evidence, and next actions."
+    },
+    {
+      "id": "semantic-details-job-progress",
+      "selector": "[data-testid=\"semantic-details-job-progress\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "Current job stage, progress, and contiguous SSE event position."
+    },
+    {
+      "id": "semantic-details-job-error",
+      "selector": "[data-testid=\"semantic-details-job-error\"]",
+      "workflow": "semantic-profile-details-review",
+      "purpose": "Diagnosable sanitized terminal or recoverable job error."
+    },
+    {
+      "id": "task-discovery-root",
+      "selector": "[data-testid=\"task-discovery-root\"]",
+      "workflow": "task-driven-dataset-discovery",
+      "purpose": "Task-driven dataset discovery workspace."
+    },
+    {
+      "id": "task-discovery-query-input",
+      "selector": "[data-testid=\"task-discovery-query-input\"]",
+      "workflow": "task-driven-dataset-discovery",
+      "purpose": "Natural-language task request input."
+    },
+    {
+      "id": "task-discovery-parse",
+      "selector": "[data-testid=\"task-discovery-parse\"]",
+      "workflow": "task-driven-dataset-discovery",
+      "purpose": "Parse the task request into a reviewable TaskSemanticProfile."
+    },
+    {
+      "id": "task-discovery-task-profile",
+      "selector": "[data-testid=\"task-discovery-task-profile\"]",
+      "workflow": "task-driven-dataset-discovery",
+      "purpose": "Parsed required and preferred conditions, including structured editing affordance."
+    },
+    {
+      "id": "task-discovery-resource-scope",
+      "selector": "[data-testid=\"task-discovery-resource-scope\"]",
+      "workflow": "task-driven-dataset-discovery",
+      "purpose": "Dataset resource range selection."
+    },
+    {
+      "id": "task-discovery-run",
+      "selector": "[data-testid=\"task-discovery-run\"]",
+      "workflow": "task-driven-dataset-discovery",
+      "purpose": "Start dataset-task matching for the reviewed task profile and selected scope."
+    },
+    {
+      "id": "task-discovery-compatibility-filter",
+      "selector": "[data-testid=\"task-discovery-compatibility-filter\"]",
+      "workflow": "task-driven-dataset-discovery",
+      "purpose": "Filter results by Compatibility without changing result semantics."
+    },
+    {
+      "id": "task-discovery-sort-explanation",
+      "selector": "[data-testid=\"task-discovery-sort-explanation\"]",
+      "workflow": "task-driven-dataset-discovery",
+      "purpose": "Explain default ranking eligibility and the separate non-ranked result groups."
+    },
+    {
+      "id": "task-discovery-ranked-results",
+      "selector": "[data-testid=\"task-discovery-ranked-results\"]",
+      "workflow": "task-driven-dataset-discovery",
+      "purpose": "Default-ranked COMPATIBLE results only."
+    },
+    {
+      "id": "task-discovery-nonranked-results",
+      "selector": "[data-testid=\"task-discovery-nonranked-results\"]",
+      "workflow": "task-driven-dataset-discovery",
+      "purpose": "Separate PARTIALLY_COMPATIBLE, INCOMPATIBLE, and UNKNOWN result groups."
+    },
+    {
+      "id": "task-discovery-result-explanation",
+      "selector": "[data-testid=\"task-discovery-result-explanation\"]",
+      "workflow": "task-driven-dataset-discovery",
+      "purpose": "Selected result's requirements, preferences, conflicts, UNKNOWNs, and evidence."
+    },
+    {
+      "id": "task-discovery-job-progress",
+      "selector": "[data-testid=\"task-discovery-job-progress\"]",
+      "workflow": "task-driven-dataset-discovery",
+      "purpose": "Task parsing or matching job stage, progress, and contiguous SSE event position."
+    },
+    {
+      "id": "task-discovery-job-error",
+      "selector": "[data-testid=\"task-discovery-job-error\"]",
+      "workflow": "task-driven-dataset-discovery",
+      "purpose": "Diagnosable sanitized task parsing or matching error."
+    }
+  ],
+  "reviewRegions": [
+    {
+      "id": "structure",
+      "selectorId": "semantic-details-structure-region",
+      "heading": "结构语义",
+      "mustShow": [
+        "field",
+        "value",
+        "evidenceStatus",
+        "evidenceLocator",
+        "unknownReasonWhenUnknown"
+      ]
+    },
+    {
+      "id": "content",
+      "selectorId": "semantic-details-content-region",
+      "heading": "内容语义",
+      "mustShow": [
+        "aggregatedClaim",
+        "evidenceStatus",
+        "observationCount",
+        "coverage",
+        "unknownReasonWhenUnknown"
+      ]
+    },
+    {
+      "id": "samples-and-aggregation",
+      "selectorId": "semantic-details-sampling-region",
+      "heading": "样本与聚合",
+      "mustShow": [
+        "samplingStrategy",
+        "selectedCount",
+        "successfulAndFailedObservationCounts",
+        "sampleObservationDistinction",
+        "aggregationRuleVersion"
+      ]
+    },
+    {
+      "id": "evidence-and-unresolved",
+      "selectorId": "semantic-details-evidence-region",
+      "heading": "证据与未解决问题",
+      "mustShow": [
+        "evidenceKind",
+        "sourceRef",
+        "locator",
+        "unresolvedField",
+        "nextAction"
+      ]
+    }
+  ],
+  "workflowRequirements": {
+    "semantic-profile-details-review": [
+      "The four fixed review regions are present in the declared order: structure, content, samples-and-aggregation, evidence-and-unresolved.",
+      "The currently displayed snapshotRevision and profile revision are visible before a user reviews claims.",
+      "No content-semantic claim may be styled or labelled as a deterministic fact; sample observations and aggregated claims are visibly distinguishable.",
+      "UNKNOWN remains visible with its controlled reason and available next action; it cannot be hidden by an empty state.",
+      "A failed or partially completed job cannot replace the last complete profile. The UI identifies the active artifact and any prior complete revision.",
+      "Reanalyze, cancel, and retry controls appear only when their job state permits the action, but retain their stable selector whenever rendered."
+    ],
+    "task-driven-dataset-discovery": [
+      "The workspace has query input, parsed TaskSemanticProfile review, dataset resource scope, Compatibility filter, default sorting explanation, result groups, and selected-result explanation.",
+      "Required conditions are visibly distinguished from preferred conditions before matching starts.",
+      "Only COMPATIBLE results with a non-null formal suitabilityScore appear in the default-ranked results.",
+      "PARTIALLY_COMPATIBLE, INCOMPATIBLE, and UNKNOWN results appear outside the default ranking with their missing requirement, blocking evidence, or missing-evidence explanation.",
+      "A compatibility filter changes visibility only; it must not silently recompute, promote, or suppress formal eligibility.",
+      "The selected result exposes satisfied requirements, matched preferences, conflicts, UNKNOWNs, evidence references, revisions, rule version, and generated timestamp."
+    ]
+  },
+  "accessibilityRules": [
+    {
+      "id": "keyboard-reachability",
+      "rule": "Every enabled interactive control in both workflows is reachable by sequential Tab navigation in visible order; no positive tabindex is permitted."
+    },
+    {
+      "id": "focus-visible",
+      "rule": "Keyboard focus has a visible 2 CSS pixel or greater outline/indicator with at least 3:1 contrast against adjacent colors; focus cannot be clipped by a scroll container."
+    },
+    {
+      "id": "semantic-regions",
+      "rule": "Each fixed review region and major task-discovery workspace region uses a semantic section/landmark with an accessible heading or aria-labelledby reference."
+    },
+    {
+      "id": "control-names",
+      "rule": "Icon-only and text controls have non-empty accessible names that state their action; test IDs are not an accessible-name substitute."
+    },
+    {
+      "id": "status-announcements",
+      "rule": "Job status, reconnect state, and sanitized errors use an appropriate aria-live status or alert region without repeatedly announcing unchanged SSE events."
+    },
+    {
+      "id": "expandable-evidence",
+      "rule": "Each expandable evidence, unresolved item, and result explanation exposes its expanded state via native details/summary or aria-expanded and is operable with Enter and Space."
+    }
+  ],
+  "layoutRules": [
+    {
+      "id": "long-paths",
+      "rule": "Relative paths, source references, and revisions wrap at natural break opportunities; they do not cause horizontal page overflow at either fixed viewport. A full value remains available through an accessible title or explicit copy control."
+    },
+    {
+      "id": "long-evidence",
+      "rule": "Long evidence summaries and locators wrap or scroll inside their own bounded code/text area. They cannot overlap adjacent claims, controls, or drawer boundaries."
+    },
+    {
+      "id": "narrow-layout",
+      "rule": "At mobile-390x844, result rows and semantic claim rows reflow to a single-column readable layout. Tables either expose labeled stacked rows or an explicitly scrollable region with the first column/row label preserved."
+    },
+    {
+      "id": "action-reachability",
+      "rule": "At both viewports, cancel, retry, reanalyze, parse, run, filters, and result expansion controls remain visible or reachable by ordinary scrolling and have a 44 by 44 CSS pixel minimum hit target when icon-only."
+    },
+    {
+      "id": "sample-vs-aggregate",
+      "rule": "Sample-level observations include their sample reference and are visually differentiated from dataset-level aggregated claims by a persistent label and distinct container treatment."
+    },
+    {
+      "id": "no-clipping",
+      "rule": "No required content, focus indicator, live status, error, or action control is clipped, occluded, or positioned outside the viewport without a reachable scroll path."
+    }
+  ],
+  "sseReconnectChecks": [
+    {
+      "id": "details-reconnect-contiguous-events",
+      "workflow": "semantic-profile-details-review",
+      "fixture": "details-sse-reconnected",
+      "assertions": [
+        "Render events 1 through 3, disconnect, reconnect with lastEventId 3, then deliver replayed event 3 and events 4 through 6.",
+        "The rendered timeline contains each eventId 1 through 6 exactly once in increasing order.",
+        "The final job state, progress, evidence count, and result revision match the no-disconnect fixture with the same event sequence.",
+        "A reconnect indicator is announced once for the transition and clears after synchronization."
+      ]
+    },
+    {
+      "id": "task-discovery-reconnect-idempotent-result",
+      "workflow": "task-driven-dataset-discovery",
+      "fixture": "task-discovery-sse-reconnected",
+      "assertions": [
+        "Render an in-progress match job, disconnect before result event 8, reconnect with lastEventId 7, then replay 7 and deliver 8 through end.",
+        "The final ranked and non-ranked result memberships and selected-result explanation equal the no-disconnect fixture.",
+        "No duplicate result card, duplicate error, or duplicate evidence item is rendered after replay.",
+        "The UI does not expose a stale partial result as completed before the terminal result/end event."
+      ]
+    }
+  ],
+  "fixtures": [
+    {
+      "id": "details-not-started",
+      "workflow": "semantic-profile-details-review",
+      "state": "not_started",
+      "requiredSelectorIds": [
+        "semantic-details-root",
+        "semantic-details-profile-status",
+        "semantic-details-reanalyze",
+        "semantic-details-structure-region",
+        "semantic-details-content-region",
+        "semantic-details-sampling-region",
+        "semantic-details-evidence-region"
+      ]
+    },
+    {
+      "id": "details-queued",
+      "workflow": "semantic-profile-details-review",
+      "state": "queued",
+      "requiredSelectorIds": [
+        "semantic-details-root",
+        "semantic-details-profile-status",
+        "semantic-details-cancel",
+        "semantic-details-job-progress"
+      ]
+    },
+    {
+      "id": "details-running",
+      "workflow": "semantic-profile-details-review",
+      "state": "running",
+      "requiredSelectorIds": [
+        "semantic-details-root",
+        "semantic-details-cancel",
+        "semantic-details-job-progress",
+        "semantic-details-sampling-region"
+      ]
+    },
+    {
+      "id": "details-partial-unknown",
+      "workflow": "semantic-profile-details-review",
+      "state": "partially_completed",
+      "requiredSelectorIds": [
+        "semantic-details-root",
+        "semantic-details-content-region",
+        "semantic-details-sample-observation-list",
+        "semantic-details-unresolved-list",
+        "semantic-details-job-progress"
+      ]
+    },
+    {
+      "id": "details-completed-conflict",
+      "workflow": "semantic-profile-details-review",
+      "state": "conflict",
+      "requiredSelectorIds": [
+        "semantic-details-root",
+        "semantic-details-claim-list",
+        "semantic-details-evidence-list",
+        "semantic-details-unresolved-list",
+        "semantic-details-evidence-region"
+      ]
+    },
+    {
+      "id": "details-failed-retryable",
+      "workflow": "semantic-profile-details-review",
+      "state": "failed",
+      "requiredSelectorIds": [
+        "semantic-details-root",
+        "semantic-details-profile-status",
+        "semantic-details-job-error",
+        "semantic-details-retry"
+      ]
+    },
+    {
+      "id": "details-cancelled",
+      "workflow": "semantic-profile-details-review",
+      "state": "cancelled",
+      "requiredSelectorIds": [
+        "semantic-details-root",
+        "semantic-details-profile-status",
+        "semantic-details-reanalyze"
+      ]
+    },
+    {
+      "id": "details-old-revision",
+      "workflow": "semantic-profile-details-review",
+      "state": "superseded_old_revision",
+      "requiredSelectorIds": [
+        "semantic-details-root",
+        "semantic-details-profile-status",
+        "semantic-details-claim-list",
+        "semantic-details-job-error"
+      ]
+    },
+    {
+      "id": "details-forbidden",
+      "workflow": "semantic-profile-details-review",
+      "state": "forbidden",
+      "requiredSelectorIds": [
+        "semantic-details-root",
+        "semantic-details-profile-status",
+        "semantic-details-job-error"
+      ]
+    },
+    {
+      "id": "details-unsupported-media",
+      "workflow": "semantic-profile-details-review",
+      "state": "unsupported_media",
+      "requiredSelectorIds": [
+        "semantic-details-root",
+        "semantic-details-content-region",
+        "semantic-details-unresolved-list",
+        "semantic-details-evidence-region"
+      ]
+    },
+    {
+      "id": "details-no-samples",
+      "workflow": "semantic-profile-details-review",
+      "state": "no_samples",
+      "requiredSelectorIds": [
+        "semantic-details-root",
+        "semantic-details-sampling-region",
+        "semantic-details-unresolved-list"
+      ]
+    },
+    {
+      "id": "details-sse-reconnected",
+      "workflow": "semantic-profile-details-review",
+      "state": "sse_reconnected",
+      "requiredSelectorIds": [
+        "semantic-details-root",
+        "semantic-details-job-progress",
+        "semantic-details-evidence-list",
+        "semantic-details-profile-status"
+      ]
+    },
+    {
+      "id": "task-discovery-required-preferred",
+      "workflow": "task-driven-dataset-discovery",
+      "state": "not_started",
+      "requiredSelectorIds": [
+        "task-discovery-root",
+        "task-discovery-query-input",
+        "task-discovery-parse",
+        "task-discovery-task-profile",
+        "task-discovery-resource-scope",
+        "task-discovery-run"
+      ]
+    },
+    {
+      "id": "task-discovery-running",
+      "workflow": "task-driven-dataset-discovery",
+      "state": "running",
+      "requiredSelectorIds": [
+        "task-discovery-root",
+        "task-discovery-task-profile",
+        "task-discovery-job-progress"
+      ]
+    },
+    {
+      "id": "task-discovery-ranked-compatible",
+      "workflow": "task-driven-dataset-discovery",
+      "state": "completed",
+      "requiredSelectorIds": [
+        "task-discovery-root",
+        "task-discovery-compatibility-filter",
+        "task-discovery-sort-explanation",
+        "task-discovery-ranked-results",
+        "task-discovery-result-explanation"
+      ]
+    },
+    {
+      "id": "task-discovery-nonranked-incompatible",
+      "workflow": "task-driven-dataset-discovery",
+      "state": "incompatible",
+      "requiredSelectorIds": [
+        "task-discovery-root",
+        "task-discovery-compatibility-filter",
+        "task-discovery-nonranked-results",
+        "task-discovery-result-explanation"
+      ]
+    },
+    {
+      "id": "task-discovery-unknown",
+      "workflow": "task-driven-dataset-discovery",
+      "state": "unknown",
+      "requiredSelectorIds": [
+        "task-discovery-root",
+        "task-discovery-nonranked-results",
+        "task-discovery-result-explanation"
+      ]
+    },
+    {
+      "id": "task-discovery-failed",
+      "workflow": "task-driven-dataset-discovery",
+      "state": "failed",
+      "requiredSelectorIds": [
+        "task-discovery-root",
+        "task-discovery-job-progress",
+        "task-discovery-job-error"
+      ]
+    },
+    {
+      "id": "task-discovery-sse-reconnected",
+      "workflow": "task-driven-dataset-discovery",
+      "state": "sse_reconnected",
+      "requiredSelectorIds": [
+        "task-discovery-root",
+        "task-discovery-job-progress",
+        "task-discovery-ranked-results",
+        "task-discovery-nonranked-results",
+        "task-discovery-result-explanation"
+      ]
+    }
+  ],
+  "requiredCoverage": {
+    "fixtureStates": [
+      "not_started",
+      "queued",
+      "running",
+      "partially_completed",
+      "completed",
+      "failed",
+      "cancelled",
+      "superseded_old_revision",
+      "forbidden",
+      "unsupported_media",
+      "no_samples",
+      "unknown",
+      "conflict",
+      "incompatible",
+      "sse_reconnected"
+    ],
+    "reviewRegionIds": [
+      "structure",
+      "content",
+      "samples-and-aggregation",
+      "evidence-and-unresolved"
+    ],
+    "workflowIds": [
+      "semantic-profile-details-review",
+      "task-driven-dataset-discovery"
+    ],
+    "accessibilityRuleIds": [
+      "keyboard-reachability",
+      "focus-visible",
+      "semantic-regions",
+      "control-names",
+      "status-announcements",
+      "expandable-evidence"
+    ],
+    "layoutRuleIds": [
+      "long-paths",
+      "long-evidence",
+      "narrow-layout",
+      "action-reachability",
+      "sample-vs-aggregate",
+      "no-clipping"
+    ]
+  }
+}

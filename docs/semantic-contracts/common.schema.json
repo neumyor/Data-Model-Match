@@ -1,0 +1,303 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.local/schemas/semantic/v1/common.schema.json",
+  "title": "DataModelMatch semantic API common definitions v1",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]{2,127}$"
+    },
+    "revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "fingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+    },
+    "claimStatus": {
+      "type": "string",
+      "enum": ["VERIFIED", "SUPPORTED", "OBSERVED", "UNKNOWN"]
+    },
+    "unknownReason": {
+      "type": "string",
+      "enum": [
+        "NO_EVIDENCE",
+        "INSUFFICIENT_SAMPLE_COVERAGE",
+        "UNSUPPORTED_MEDIA",
+        "MODEL_FAILURE",
+        "CONFLICTING_EVIDENCE",
+        "INSPECTION_LIMIT",
+        "ACCESS_DENIED",
+        "CANCELLED"
+      ]
+    },
+    "taskFamily": {
+      "type": "string",
+      "enum": [
+        "image_classification",
+        "object_detection",
+        "multi_object_tracking",
+        "semantic_segmentation",
+        "instance_segmentation",
+        "pose_keypoints",
+        "action_video_understanding",
+        "video_anomaly_detection",
+        "reid_retrieval"
+      ]
+    },
+    "datasetModality": {
+      "type": "string",
+      "enum": ["RGB", "infrared", "depth", "thermal", "multimodal", "event"]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "sourceRef", "locator", "stage", "summary", "snapshotRevision"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "kind": {
+          "type": "string",
+          "enum": ["README", "inspection", "sample", "LLM", "VLM", "aggregation"]
+        },
+        "sourceRef": {"type": "string", "minLength": 1, "maxLength": 512},
+        "locator": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": {"type": "string", "enum": ["text", "inspection", "sample", "aggregation"]},
+            "path": {"$ref": "#/$defs/relativePath"},
+            "lineStart": {"type": "integer", "minimum": 1},
+            "lineEnd": {"type": "integer", "minimum": 1},
+            "sampleRef": {"$ref": "#/$defs/id"},
+            "inspectionRef": {"$ref": "#/$defs/id"},
+            "aggregationRef": {"$ref": "#/$defs/id"}
+          },
+          "allOf": [
+            {
+              "if": {"properties": {"kind": {"const": "text"}}},
+              "then": {"required": ["path", "lineStart", "lineEnd"]}
+            },
+            {
+              "if": {"properties": {"kind": {"const": "inspection"}}},
+              "then": {"required": ["inspectionRef"]}
+            },
+            {
+              "if": {"properties": {"kind": {"const": "sample"}}},
+              "then": {"required": ["sampleRef"]}
+            },
+            {
+              "if": {"properties": {"kind": {"const": "aggregation"}}},
+              "then": {"required": ["aggregationRef"]}
+            }
+          ]
+        },
+        "stage": {
+          "type": "string",
+          "enum": ["survey", "inspection", "structural", "sampling", "vision", "aggregation", "fusion", "matching"]
+        },
+        "summary": {"type": "string", "minLength": 1, "maxLength": 2048},
+        "snapshotRevision": {"$ref": "#/$defs/revision"}
+      }
+    },
+    "sampleRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "path", "contentHash"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "kind": {"type": "string", "enum": ["image", "frame", "clip"]},
+        "path": {"$ref": "#/$defs/relativePath"},
+        "contentHash": {"$ref": "#/$defs/fingerprint"},
+        "videoPath": {"$ref": "#/$defs/relativePath"},
+        "startMs": {"type": "integer", "minimum": 0},
+        "endMs": {"type": "integer", "minimum": 1},
+        "frameStart": {"type": "integer", "minimum": 0},
+        "frameEnd": {"type": "integer", "minimum": 0},
+        "samplingFps": {"type": "number", "exclusiveMinimum": 0, "maximum": 240}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"kind": {"enum": ["frame", "clip"]}}},
+          "then": {"required": ["videoPath", "startMs", "endMs", "frameStart", "frameEnd", "samplingFps"]}
+        },
+        {
+          "if": {"required": ["startMs", "endMs"]},
+          "then": {"properties": {"endMs": {"minimum": 1}}}
+        }
+      ]
+    },
+    "valueDistribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "observationCount", "eligibleObservationCount", "proportion", "isDominant", "evidenceRefs"],
+      "properties": {
+        "value": {"type": "string", "minLength": 1, "maxLength": 256},
+        "observationCount": {"type": "integer", "minimum": 0},
+        "eligibleObservationCount": {"type": "integer", "minimum": 1},
+        "proportion": {"type": "number", "minimum": 0, "maximum": 1},
+        "isDominant": {"type": "boolean"},
+        "evidenceRefs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/id"},
+          "uniqueItems": true
+        }
+      }
+    },
+    "visualObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "sampleRef", "objectCategories", "environments", "viewpoints",
+        "targetScale", "objectDensity", "occlusion", "illumination",
+        "cameraMotion", "targetMotion", "vlmModel", "configurationFingerprint",
+        "status", "evidenceRefs"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "sampleRef": {"$ref": "#/$defs/id"},
+        "objectCategories": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 128}, "uniqueItems": true},
+        "environments": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 128}, "uniqueItems": true},
+        "viewpoints": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 128}, "uniqueItems": true},
+        "targetScale": {"type": "string", "enum": ["UNKNOWN", "tiny", "small", "medium", "large", "mixed"]},
+        "objectDensity": {"type": "string", "enum": ["UNKNOWN", "low", "medium", "high", "mixed"]},
+        "occlusion": {"type": "string", "enum": ["UNKNOWN", "rare", "moderate", "frequent"]},
+        "illumination": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 128}, "uniqueItems": true},
+        "cameraMotion": {"type": "string", "enum": ["UNKNOWN", "static", "moving"]},
+        "targetMotion": {"type": "string", "enum": ["UNKNOWN", "slow", "moderate", "fast", "mixed"]},
+        "vlmModel": {"type": "string", "minLength": 1, "maxLength": 256},
+        "configurationFingerprint": {"$ref": "#/$defs/fingerprint"},
+        "status": {"type": "string", "enum": ["COMPLETED", "FAILED", "UNSUPPORTED", "CANCELLED"]},
+        "failureCode": {"type": "string", "enum": ["VLM_TIMEOUT", "VLM_EMPTY_RESPONSE", "VLM_INVALID_RESPONSE", "UNSUPPORTED_MEDIA", "MEDIA_READ_FAILED", "CANCELLED"]},
+        "evidenceRefs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/id"}, "uniqueItems": true}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "COMPLETED"}}},
+          "then": {"not": {"required": ["failureCode"]}}
+        },
+        {
+          "if": {"properties": {"status": {"enum": ["FAILED", "UNSUPPORTED", "CANCELLED"]}}},
+          "then": {"required": ["failureCode"]}
+        }
+      ]
+    },
+    "samplingSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "strategy", "strata", "candidateCount", "selectedCount", "successfulObservationCount", "failedObservationCount", "coverage", "selectionSeed", "selectionEvidenceRefs"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "strategy": {"type": "string", "enum": ["stratified", "temporal_uniform", "coverage_clustered", "deterministic_fallback"]},
+        "strata": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 256}, "uniqueItems": true},
+        "candidateCount": {"type": "integer", "minimum": 0},
+        "selectedCount": {"type": "integer", "minimum": 0},
+        "successfulObservationCount": {"type": "integer", "minimum": 0},
+        "failedObservationCount": {"type": "integer", "minimum": 0},
+        "coverage": {"type": "number", "minimum": 0, "maximum": 1},
+        "selectionSeed": {"type": "integer", "minimum": 0, "maximum": 2147483647},
+        "selectionEvidenceRefs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/id"}, "uniqueItems": true}
+      }
+    },
+    "semanticClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "field", "scope", "status", "evidenceRefs"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "field": {"type": "string", "minLength": 1, "maxLength": 128},
+        "scope": {"type": "string", "enum": ["structural", "content", "task-specific"]},
+        "value": {"type": "string", "minLength": 1, "maxLength": 256},
+        "valueDistribution": {"$ref": "#/$defs/valueDistribution"},
+        "status": {"$ref": "#/$defs/claimStatus"},
+        "evidenceRefs": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/id"}, "uniqueItems": true},
+        "aggregationRef": {"$ref": "#/$defs/id"},
+        "unknownReason": {"$ref": "#/$defs/unknownReason"},
+        "conflictRefs": {"type": "array", "items": {"$ref": "#/$defs/id"}, "uniqueItems": true}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "UNKNOWN"}}},
+          "then": {"required": ["unknownReason"], "not": {"anyOf": [{"required": ["value"]}, {"required": ["valueDistribution"]}]}}
+        },
+        {
+          "if": {"properties": {"status": {"enum": ["VERIFIED", "SUPPORTED", "OBSERVED"]}}},
+          "then": {"anyOf": [{"required": ["value"]}, {"required": ["valueDistribution"]}]}
+        },
+        {
+          "if": {"properties": {"status": {"const": "SUPPORTED"}}},
+          "then": {"required": ["aggregationRef"]}
+        }
+      ]
+    },
+    "unresolvedField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field", "reason", "attemptedEvidenceRefs", "nextAction"],
+      "properties": {
+        "field": {"type": "string", "minLength": 1, "maxLength": 128},
+        "reason": {"$ref": "#/$defs/unknownReason"},
+        "attemptedEvidenceRefs": {"type": "array", "items": {"$ref": "#/$defs/id"}, "uniqueItems": true},
+        "nextAction": {"type": "string", "enum": ["inspect_metadata", "inspect_annotation", "sample_media", "request_access", "unsupported"]}
+      }
+    },
+    "taskSpecificSemantic": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["task", "longTail", "domainFeatures"], "properties": {"task": {"const": "image_classification"}, "longTail": {"type": "string", "enum": ["UNKNOWN", "low", "moderate", "high"]}, "domainFeatures": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 128}, "uniqueItems": true}}},
+        {"type": "object", "additionalProperties": false, "required": ["task", "scaleDistribution", "occlusion"], "properties": {"task": {"const": "object_detection"}, "scaleDistribution": {"type": "string", "enum": ["UNKNOWN", "small_target_heavy", "balanced", "large_target_heavy"]}, "occlusion": {"type": "string", "enum": ["UNKNOWN", "rare", "moderate", "frequent"]}}},
+        {"type": "object", "additionalProperties": false, "required": ["task", "temporalContinuity", "motionChallenge"], "properties": {"task": {"const": "multi_object_tracking"}, "temporalContinuity": {"type": "string", "enum": ["UNKNOWN", "sparse", "continuous"]}, "motionChallenge": {"type": "string", "enum": ["UNKNOWN", "low", "moderate", "high"]}}},
+        {"type": "object", "additionalProperties": false, "required": ["task", "boundaryComplexity", "smallObjectRatio"], "properties": {"task": {"enum": ["semantic_segmentation", "instance_segmentation"]}, "boundaryComplexity": {"type": "string", "enum": ["UNKNOWN", "low", "moderate", "high"]}, "smallObjectRatio": {"type": "string", "enum": ["UNKNOWN", "low", "moderate", "high"]}}},
+        {"type": "object", "additionalProperties": false, "required": ["task", "keypointVisibility", "viewpointChallenge"], "properties": {"task": {"const": "pose_keypoints"}, "keypointVisibility": {"type": "string", "enum": ["UNKNOWN", "low", "moderate", "high"]}, "viewpointChallenge": {"type": "string", "enum": ["UNKNOWN", "low", "moderate", "high"]}}},
+        {"type": "object", "additionalProperties": false, "required": ["task", "actionTypes", "temporalDynamics"], "properties": {"task": {"const": "action_video_understanding"}, "actionTypes": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 128}, "uniqueItems": true}, "temporalDynamics": {"type": "string", "enum": ["UNKNOWN", "low", "moderate", "high"]}}},
+        {"type": "object", "additionalProperties": false, "required": ["task", "anomalyTypes", "temporalSparsity"], "properties": {"task": {"const": "video_anomaly_detection"}, "anomalyTypes": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 128}, "uniqueItems": true}, "temporalSparsity": {"type": "string", "enum": ["UNKNOWN", "low", "moderate", "high"]}}},
+        {"type": "object", "additionalProperties": false, "required": ["task", "identityDiversity", "crossCameraVariation", "crossDomainVariation"], "properties": {"task": {"const": "reid_retrieval"}, "identityDiversity": {"type": "string", "enum": ["UNKNOWN", "low", "moderate", "high"]}, "crossCameraVariation": {"type": "string", "enum": ["UNKNOWN", "low", "moderate", "high"]}, "crossDomainVariation": {"type": "string", "enum": ["UNKNOWN", "low", "moderate", "high"]}}}
+      ]
+    },
+    "jobStatus": {
+      "type": "string",
+      "enum": ["queued", "running", "partially_completed", "completed", "failed", "cancelled", "superseded"]
+    },
+    "job": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jobId", "jobType", "status", "createdAt", "updatedAt", "attempt", "maxAttempts"],
+      "properties": {
+        "jobId": {"$ref": "#/$defs/id"},
+        "jobType": {"type": "string", "enum": ["profile", "match"]},
+        "status": {"$ref": "#/$defs/jobStatus"},
+        "createdAt": {"$ref": "#/$defs/timestamp"},
+        "updatedAt": {"$ref": "#/$defs/timestamp"},
+        "attempt": {"type": "integer", "minimum": 0, "maximum": 10},
+        "maxAttempts": {"type": "integer", "minimum": 0, "maximum": 10},
+        "idempotencyKey": {"type": "string", "minLength": 1, "maxLength": 512},
+        "resultRef": {"$ref": "#/$defs/id"},
+        "error": {"$ref": "error-envelope.schema.json"}
+      }
+    },
+    "errorCode": {
+      "type": "string",
+      "enum": [
+        "SCHEMA_VALIDATION_FAILED", "UNSUPPORTED_SCHEMA_VERSION", "RESOURCE_NOT_FOUND",
+        "SNAPSHOT_NOT_FOUND", "REVISION_CONFLICT", "PROFILE_NOT_FOUND",
+        "TASK_PROFILE_NOT_FOUND", "JOB_NOT_FOUND", "JOB_NOT_CANCELLABLE",
+        "IDEMPOTENCY_KEY_CONFLICT", "STALE_JOB_SUPERSEDED", "VLM_CONFIG_INVALID",
+        "VLM_UNAVAILABLE", "VLM_TIMEOUT", "VLM_EMPTY_RESPONSE", "VLM_INVALID_RESPONSE",
+        "UNSUPPORTED_MEDIA", "MEDIA_READ_FAILED", "INSUFFICIENT_EVIDENCE",
+        "ACCESS_DENIED", "RATE_LIMITED", "INTERNAL_ERROR"
+      ]
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datamodelmatch.invalid/schemas/governance/ownership-manifest-1.json",
+  "title": "Dataset-management work-package ownership manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "baselineId",
+    "baseRevision",
+    "sharedPaths",
+    "globalForbiddenPaths",
+    "workPackages"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "baselineId": {
+      "type": "string",
+      "pattern": "^governance_baseline_[a-z0-9_]+$"
+    },
+    "baseRevision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "sharedPaths": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/pathPattern" }
+    },
+    "globalForbiddenPaths": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/pathPattern" }
+    },
+    "workPackages": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/workPackage" }
+    }
+  },
+  "$defs": {
+    "pathPattern": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/*?-]+$"
+    },
+    "workPackage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workPackageId",
+        "phase",
+        "status",
+        "ownedPaths",
+        "readOnlyPaths",
+        "generatedPaths",
+        "forbiddenPaths",
+        "baseRevision",
+        "responsibleAgent",
+        "modelTier",
+        "evidencePaths"
+      ],
+      "properties": {
+        "workPackageId": {
+          "type": "string",
+          "pattern": "^(WP[0-8]|GOV-BASELINE)$"
+        },
+        "phase": {
+          "type": "string",
+          "pattern": "^(Phase [0-7]|Governance)$"
+        },
+        "status": {
+          "enum": [
+            "PLANNED",
+            "ASSIGNED",
+            "IMPLEMENTED",
+            "REPORT_SUBMITTED",
+            "ACCEPTED",
+            "INTEGRATED",
+            "BLOCKED",
+            "REJECTED"
+          ]
+        },
+        "ownedPaths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/pathPattern" }
+        },
+        "readOnlyPaths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/pathPattern" }
+        },
+        "generatedPaths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/pathPattern" }
+        },
+        "forbiddenPaths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/pathPattern" }
+        },
+        "baseRevision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "responsibleAgent": { "type": "string", "minLength": 1 },
+        "modelTier": {
+          "enum": ["Luna Medium", "Terra Medium"]
+        },
+        "evidencePaths": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/pathPattern" }
+        }
+      }
+    }
+  }
+}

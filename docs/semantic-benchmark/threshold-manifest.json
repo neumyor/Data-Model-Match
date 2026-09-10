@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "thresholdManifestId": "thresholds_phase7_preliminary_v1",
+  "status": "preliminary_pending_independent_calibration",
+  "benchmarkManifestId": "manifest_phase7_pilot",
+  "createdAt": "2026-09-09T00:00:00Z",
+  "frozenBeforeFinalBenchmark": true,
+  "calibrationRequired": true,
+  "calibrationProtocol": {
+    "pilotManifestId": "manifest_phase7_pilot",
+    "protocolVersion": "semantic_benchmark_calibration_v1",
+    "independentCalibrator": "to_be_assigned",
+    "independentCalibratorStatus": "pending",
+    "minimumDatasets": 5,
+    "minimumTaskFamilies": 4,
+    "minimumQueries": 20,
+    "repetitionsPerCondition": 3,
+    "seedSchedule": [20260909, 20260910, 20260911],
+    "approvalRequired": true,
+    "finalThresholdsMustBeCommittedBefore": "final_benchmark_execution"
+  },
+  "calibrationEvidence": {
+    "status": "pending",
+    "reportId": null,
+    "reportSha256": null,
+    "completedAt": null
+  },
+  "approval": {
+    "status": "pending",
+    "approverId": null,
+    "approvedAt": null,
+    "changeRecordId": null
+  },
+  "thresholds": {
+    "structuralPrecision": { "operator": ">=", "value": 0.80, "status": "pilot_floor_pending_calibration" },
+    "structuralRecall": { "operator": ">=", "value": 0.75, "status": "pilot_floor_pending_calibration" },
+    "structuralF1": { "operator": ">=", "value": 0.77, "status": "pilot_floor_pending_calibration" },
+    "contentMacroF1": { "operator": ">=", "value": 0.60, "status": "pilot_floor_pending_calibration" },
+    "contentUnknownRate": { "operator": "<=", "value": 0.35, "status": "pilot_ceiling_pending_calibration" },
+    "profileConsistency": { "operator": ">=", "value": 0.80, "status": "pilot_floor_pending_calibration" },
+    "hitAtK": { "k": 5, "operator": ">=", "value": 0.60, "status": "pilot_floor_pending_calibration" },
+    "mrr": { "operator": ">=", "value": 0.45, "status": "pilot_floor_pending_calibration" },
+    "ndcg": { "k": 5, "operator": ">=", "value": 0.55, "status": "pilot_floor_pending_calibration" },
+    "latencyP95Ms": { "operator": "<=", "value": 30000, "status": "operational_budget_pending_calibration" },
+    "samplesPerProfile": { "operator": "<=", "value": 64, "status": "operational_budget_pending_calibration" },
+    "tokensPerTaskQuery": { "operator": "<=", "value": 8000, "status": "operational_budget_pending_calibration" },
+    "apiCallsPerProfile": { "operator": "<=", "value": 16, "status": "operational_budget_pending_calibration" }
+  },
+  "nonNegotiableRules": [
+    "Never revise a threshold after inspecting final benchmark results.",
+    "A pilot floor is not evidence of final product quality.",
+    "UNKNOWN remains in the denominator defined by the metric specification.",
+    "PARTIALLY_COMPATIBLE, INCOMPATIBLE, and UNKNOWN are excluded from default suitability ranking.",
+    "Any threshold exception is recorded as a failed gate with a reason and approval."
+  ]
+}
