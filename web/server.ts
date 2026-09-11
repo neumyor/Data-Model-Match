@@ -1,4 +1,5 @@
-import { basename, dirname, join, normalize, resolve } from "node:path";
+import { basename, dirname, join, normalize, resolve, sep } from "node:path";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 
@@ -29,6 +30,14 @@ const maxTimeoutMs = 180_000;
 let configuredApiKey = "";
 let resourceStorePath = defaultResourceStorePath;
 
+function isPathWithinRoot(candidate: string, root: string): boolean {
+  const normalizedCandidate = normalize(candidate);
+  const normalizedRoot = normalize(root);
+  const comparisonCandidate = process.platform === "win32" ? normalizedCandidate.toLowerCase() : normalizedCandidate;
+  const comparisonRoot = process.platform === "win32" ? normalizedRoot.toLowerCase() : normalizedRoot;
+  return comparisonCandidate === comparisonRoot || comparisonCandidate.startsWith(`${comparisonRoot}${sep}`);
+}
+
 const mimeTypes: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -43,6 +52,29 @@ function jsonResponse(body: JsonObject, status = 200): Response {
     status,
     headers: { "cache-control": "no-store" },
   });
+}
+
+function pythonChildEnvironment(): Record<string, string | undefined> {
+  return {
+    ...process.env,
+    PYTHONPATH: "src",
+    // Python inherits the Windows ANSI code page when stdout is piped unless
+    // its I/O encoding is explicit. The server always decodes child output as UTF-8.
+    PYTHONIOENCODING: "utf-8",
+    PYTHONUTF8: "1",
+  };
+}
+
+function pythonExecutable(): string {
+  const configured = process.env.PYTHON?.trim();
+  if (configured) return configured;
+
+  const virtualEnvironmentPython = process.platform === "win32"
+    ? join(projectRoot, ".venv", "Scripts", "python.exe")
+    : join(projectRoot, ".venv", "bin", "python");
+  if (existsSync(virtualEnvironmentPython)) return virtualEnvironmentPython;
+
+  return process.platform === "win32" ? "python" : "python3";
 }
 
 function errorResponse(code: string, message: string, status: number): Response {
@@ -128,7 +160,7 @@ function validateWorkspacePath(value: string): string {
     resolve(projectRoot, ".git"),
     resolve(projectRoot, "_reference_only"),
   ];
-  if (protectedRoots.some((root) => path === root || path.startsWith(`${root}/`))) {
+  if (protectedRoots.some((root) => isPathWithinRoot(path, root))) {
     throw new RequestError(
       "PROTECTED_WORKSPACE_PATH",
       "资源工作区不能设置在 .git 或 _reference_only 目录中",
@@ -257,7 +289,7 @@ function serializeEvent(event: ServerEvent): Uint8Array {
 
 function resourceCommand(args: string[]): string[] {
   return [
-    process.env.PYTHON ?? "python3",
+    pythonExecutable(),
     "-m",
     "datamodelmatch.resource_cli",
     "--store",
@@ -361,7 +393,7 @@ async function stageLocalUpload(request: Request): Promise<LocalUpload> {
   try {
     for (const { file, relativePath } of stagedFiles) {
       const target = join(sourcePath, relativePath);
-      if (target !== sourcePath && !target.startsWith(`${sourcePath}/`)) {
+      if (target !== sourcePath && !isPathWithinRoot(target, sourcePath)) {
         throw new RequestError("INVALID_LOCAL_UPLOAD", "所选文件包含不安全路径", 400);
       }
       await mkdir(dirname(target), { recursive: true });
@@ -385,7 +417,7 @@ async function stageLocalUpload(request: Request): Promise<LocalUpload> {
 async function runResourceJson(args: string[]): Promise<JsonObject> {
   const child = Bun.spawn(resourceCommand(args), {
     cwd: projectRoot,
-    env: { ...process.env, PYTHONPATH: "src" },
+    env: pythonChildEnvironment(),
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -426,7 +458,7 @@ function runResourceStream(args: string[], cleanupPath?: string): Response {
       try {
         child = Bun.spawn(resourceCommand(args), {
           cwd: projectRoot,
-          env: { ...process.env, PYTHONPATH: "src" },
+          env: pythonChildEnvironment(),
           stdout: "pipe",
           stderr: "pipe",
         });
@@ -560,7 +592,7 @@ async function runMatch(request: Request, payload: MatchRequest): Promise<Respon
 
         childProcess = Bun.spawn(
           [
-            process.env.PYTHON ?? "python3",
+            pythonExecutable(),
             "-m",
             "datamodelmatch.cli",
             join(tempDirectory, "source.json"),
@@ -572,7 +604,7 @@ async function runMatch(request: Request, payload: MatchRequest): Promise<Respon
           ],
           {
             cwd: projectRoot,
-            env: { ...process.env, PYTHONPATH: "src" },
+            env: pythonChildEnvironment(),
             stdout: "pipe",
             stderr: "pipe",
           },
@@ -727,7 +759,7 @@ async function serveStatic(request: Request): Promise<Response> {
 
   if (requestedPath.startsWith("examples/")) {
     const examplePath = normalize(join(examplesRoot, requestedPath.slice("examples/".length)));
-    if (examplePath.startsWith(`${examplesRoot}/`) && extension === ".json") {
+    if (isPathWithinRoot(examplePath, examplesRoot) && extension === ".json") {
       const file = Bun.file(examplePath);
       if (file.size) {
         return new Response(file, {
@@ -743,7 +775,7 @@ async function serveStatic(request: Request): Promise<Response> {
   if (publicExtensions.has(extension)) {
     for (const root of staticRoots) {
       const candidate = normalize(join(root, requestedPath));
-      if (!candidate.startsWith(`${root}/`) && candidate !== root) {
+      if (!isPathWithinRoot(candidate, root)) {
         continue;
       }
       const file = Bun.file(candidate);

@@ -439,15 +439,31 @@ class SemanticArtifactStore:
         self._assert_safe_path(path.parent)
         descriptor = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
         try:
-            import fcntl
+            if os.name == "nt":
+                import msvcrt
 
-            fcntl.flock(descriptor, fcntl.LOCK_EX)
+                # msvcrt.locking() locks bytes starting at the current file
+                # position and requires the range to exist.
+                if os.path.getsize(path) == 0:
+                    os.write(descriptor, b"\0")
+                os.lseek(descriptor, 0, os.SEEK_SET)
+                msvcrt.locking(descriptor, msvcrt.LK_LOCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(descriptor, fcntl.LOCK_EX)
             yield
         finally:
             try:
-                import fcntl
+                if os.name == "nt":
+                    import msvcrt
 
-                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                    os.lseek(descriptor, 0, os.SEEK_SET)
+                    msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(descriptor, fcntl.LOCK_UN)
             finally:
                 os.close(descriptor)
 
