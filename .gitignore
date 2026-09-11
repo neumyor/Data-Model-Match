@@ -2,6 +2,11 @@
 config.llm.json
 config.workspace.json
 
+# Local Python virtual environment
+.venv/
+__pycache__/
+*.py[cod]
+
 # Read-only external reference repositories
 _reference_only/
 

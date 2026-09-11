@@ -314,10 +314,26 @@
     setTimeout(function () { if (!$("remoteSourceFields").hidden) $("sourceInput").focus(); }, 280);
   }
 
+  function normalizeHuggingFaceDatasetSource(value) {
+    try {
+      var parsed = new URL(value), host = parsed.hostname.toLowerCase();
+      if (parsed.protocol !== "https:" || (host !== "huggingface.co" && host !== "www.huggingface.co")) return value;
+      var parts = parsed.pathname.split("/").filter(Boolean);
+      if (parts.length < 3 || parts[0] !== "datasets") return value;
+      return parts[1] + "/" + parts[2];
+    } catch (error) {
+      return value;
+    }
+  }
+
   async function searchSource() {
     var query = $("sourceInput").value.trim();
     if (!query) { showToast("请先输入来源地址、仓库 ID 或关键词"); return; }
-    var kind = state.drawerKind, selectedType = $("sourceTypeSelect").value;
+    var kind = state.drawerKind;
+    if (kind === "dataset") {
+      query = normalizeHuggingFaceDatasetSource(query);
+      $("sourceInput").value = query;
+    }
     var endpoint = kind === "dataset" ? "/api/search/datasets?q=" : "/api/search/models?q=";
     $("searchResults").hidden = false;
     $("searchResults").innerHTML = '<div class="loading-card"><div><span></span>正在搜索候选来源</div></div>';
