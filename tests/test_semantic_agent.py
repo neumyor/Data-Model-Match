@@ -5,6 +5,7 @@ from pathlib import Path
 from urllib.error import HTTPError
 
 from datamodelmatch.semantic_agent import SemanticAgentClient, SemanticAgentError
+from datamodelmatch.semantic_code import CodeExecution, DatasetCodeError, SelectedImage
 
 
 class _Response:
@@ -24,6 +25,18 @@ def _write_config(path: Path, **overrides: object) -> None:
     }
     payload.update(overrides)
     path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _dataset_profile(summary: str) -> dict[str, object]:
+    return {
+        "summary": summary,
+        "semanticDescription": summary,
+        "capabilities": [],
+        "characteristics": [],
+        "limitations": [],
+        "evidenceRefs": [],
+        "unknowns": [],
+    }
 
 
 class SemanticAgentClientTests(unittest.TestCase):
@@ -69,6 +82,33 @@ class SemanticAgentClientTests(unittest.TestCase):
                 {"summary": "road scenes"},
             )
             self.assertEqual(client.match_task({"task": "road detection"}), {"ranked": True})
+
+    def test_uses_the_last_of_concatenated_json_corrections(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.llm.json"
+            _write_config(path)
+            client = SemanticAgentClient.from_config(
+                path,
+                transport=lambda request, timeout: _Response(
+                    {"choices": [{"message": {"content": '{"draft":true}\n{"final":true}'}}]}
+                ),
+            )
+            self.assertEqual(client.analyze_dataset({"dataset": "demo"}), {"final": True})
+
+    def test_extracts_json_after_model_prose(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.llm.json"
+            _write_config(path)
+            client = SemanticAgentClient.from_config(
+                path,
+                transport=lambda request, timeout: _Response(
+                    {"choices": [{"message": {"content": 'Final response:\n```json\n{"outer":{"nested":true},"final":true}\n```'}}]}
+                ),
+            )
+            self.assertEqual(
+                client.analyze_dataset({"dataset": "demo"}),
+                {"outer": {"nested": True}, "final": True},
+            )
 
     def test_request_body_uses_stream_false_and_never_contains_api_key(self) -> None:
         captured = {}
@@ -150,3 +190,161 @@ class SemanticAgentClientTests(unittest.TestCase):
             self.assertEqual(client.match_task({"task": "demo"}), {"ok": True})
 
         self.assertEqual(calls, 2)
+
+    def test_multimodal_agent_must_run_its_own_code_and_receives_selected_images(self) -> None:
+        captured = []
+        responses = iter(
+            [
+                _Response({"choices": [{"message": {"content": None, "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "run_dataset_python", "arguments": json.dumps({"code": "print('inspect')"})}}]}}]}),
+                _Response({"choices": [{"message": {"content": json.dumps(_dataset_profile("ok"))}}]}),
+                _Response({"choices": [{"message": {"content": json.dumps(_dataset_profile("ok"))}}]}),
+            ]
+        )
+
+        def transport(request, timeout):
+            captured.append(json.loads(request.data.decode("utf-8")))
+            return next(responses)
+
+        class Executor:
+            def run(self, code):
+                self.code = code
+                return CodeExecution(
+                    "Found one image.",
+                    (SelectedImage("image.png", "png", "data:image/png;base64,AA==", 1),),
+                    "",
+                )
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.llm.json"
+            _write_config(path)
+            result, executions = SemanticAgentClient.from_config(path, transport=transport).analyze_dataset_with_code(
+                {"dataset": "demo"}, Executor()
+            )
+
+        self.assertEqual(result["summary"], "ok")
+        self.assertEqual(len(executions), 1)
+        self.assertEqual(captured[0]["tools"][0]["function"]["name"], "run_dataset_python")
+        self.assertEqual(captured[1]["messages"][-1]["content"][1]["image_url"]["url"], "data:image/png;base64,AA==")
+
+    def test_multimodal_agent_can_iterate_code_before_returning_json(self) -> None:
+        def tool_call(call_id):
+            return {"choices": [{"message": {"content": None, "tool_calls": [{"id": call_id, "type": "function", "function": {"name": "run_dataset_python", "arguments": json.dumps({"code": "pass"})}}]}}]}
+
+        responses = iter([
+            _Response(tool_call("call_1")),
+            _Response(tool_call("call_2")),
+            _Response({"choices": [{"message": {"content": json.dumps(_dataset_profile("done"))}}]}),
+            _Response({"choices": [{"message": {"content": json.dumps(_dataset_profile("done"))}}]}),
+        ])
+
+        class Executor:
+            calls = 0
+
+            def run(self, code):
+                self.calls += 1
+                if self.calls == 1:
+                    return CodeExecution("Found Parquet.", tuple(), "")
+                return CodeExecution(
+                    "Decoded one image.",
+                    (SelectedImage("work/decoded.png", "png", "data:image/png;base64,AA==", 1),),
+                    "",
+                )
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.llm.json"
+            _write_config(path)
+            executor = Executor()
+            captured = []
+            result, executions = SemanticAgentClient.from_config(
+                path,
+                transport=lambda request, timeout: (
+                    captured.append(json.loads(request.data.decode("utf-8"))) or next(responses)
+                ),
+            ).analyze_dataset_with_code(
+                {"dataset": "demo", "survey": {"imageCandidates": ["records.parquet"]}},
+                executor,
+            )
+
+        self.assertEqual(result["summary"], "done")
+        self.assertEqual(executor.calls, 2)
+        self.assertEqual(len(executions), 2)
+        self.assertEqual(executions[1].images[0].path, "work/decoded.png")
+        self.assertIn("does not yet satisfy the image delivery requirement", captured[1]["messages"][-1]["content"])
+
+    def test_multimodal_agent_executes_multiple_code_calls_from_one_response(self) -> None:
+        tool_calls = [
+            {
+                "id": "call_1",
+                "type": "function",
+                "function": {"name": "run_dataset_python", "arguments": json.dumps({"code": "first"})},
+            },
+            {
+                "id": "call_2",
+                "type": "function",
+                "function": {"name": "run_dataset_python", "arguments": json.dumps({"code": "second"})},
+            },
+        ]
+        responses = iter([
+            _Response({"choices": [{"message": {"content": None, "tool_calls": tool_calls}}]}),
+            _Response({"choices": [{"message": {"content": json.dumps(_dataset_profile("done"))}}]}),
+            _Response({"choices": [{"message": {"content": json.dumps(_dataset_profile("done"))}}]}),
+        ])
+
+        class Executor:
+            def __init__(self):
+                self.codes = []
+
+            def run(self, code):
+                self.codes.append(code)
+                if code == "first":
+                    return CodeExecution("Located the container.", tuple(), "")
+                return CodeExecution(
+                    "Decoded one image.",
+                    (SelectedImage("work/decoded.png", "png", "data:image/png;base64,AA==", 1),),
+                    "",
+                )
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.llm.json"
+            _write_config(path)
+            executor = Executor()
+            result, executions = SemanticAgentClient.from_config(
+                path, transport=lambda request, timeout: next(responses)
+            ).analyze_dataset_with_code(
+                {"dataset": "demo", "survey": {"imageCandidates": ["records.parquet"]}},
+                executor,
+            )
+
+        self.assertEqual(result["summary"], "done")
+        self.assertEqual(executor.codes, ["first", "second"])
+        self.assertEqual(len(executions), 2)
+
+    def test_multimodal_agent_can_fix_a_failed_code_attempt(self) -> None:
+        def tool_call(call_id):
+            return {"choices": [{"message": {"content": None, "tool_calls": [{"id": call_id, "type": "function", "function": {"name": "run_dataset_python", "arguments": json.dumps({"code": "pass"})}}]}}]}
+
+        responses = iter([
+            _Response(tool_call("call_1")),
+            _Response(tool_call("call_2")),
+            _Response({"choices": [{"message": {"content": json.dumps(_dataset_profile("recovered"))}}]}),
+            _Response({"choices": [{"message": {"content": json.dumps(_dataset_profile("recovered"))}}]}),
+        ])
+
+        class Executor:
+            calls = 0
+
+            def run(self, code):
+                self.calls += 1
+                if self.calls == 1:
+                    raise DatasetCodeError("result manifest missing")
+                return CodeExecution("Recovered.", tuple(), "")
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.llm.json"
+            _write_config(path)
+            result, executions = SemanticAgentClient.from_config(
+                path, transport=lambda request, timeout: next(responses)
+            ).analyze_dataset_with_code({"dataset": "demo"}, Executor())
+
+        self.assertEqual(result["summary"], "recovered")
+        self.assertEqual(len(executions), 1)

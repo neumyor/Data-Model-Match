@@ -100,7 +100,7 @@ describe("semantic UI acceptance manifest", () => {
       "semantic-details-profile-status",
       "semantic-details-structure-region",
       "semantic-details-content-region",
-      "semantic-details-sampling-region",
+      "semantic-details-agent-execution-region",
       "semantic-details-evidence-region",
       "semantic-details-job-progress",
       "task-discovery-root",
@@ -197,6 +197,9 @@ describe("semantic UI acceptance manifest", () => {
     expect(appJs).toContain("Agent 语义分析");
     expect(appJs).toContain("可支持的任务");
     expect(appJs).toContain("证据与待确认事项");
+    expect(appJs).toContain("Agent 执行与图片采样");
+    expect(appJs).toContain("agentCodeExecutions");
+    expect(appJs).not.toContain("没有可用于视觉观察的样本，Agent 仅使用结构和文档证据。");
     expect(appJs).toContain("原始字段与结构");
     expect(appJs.indexOf("semanticProfileSection(resource.semanticProfile, resource.id)")).toBeLessThan(
       appJs.indexOf("原始字段与结构")

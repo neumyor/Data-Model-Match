@@ -507,10 +507,22 @@
     var limitations = Array.isArray(analysis.limitations) ? analysis.limitations : [];
     var unknowns = Array.isArray(profile.unresolved) ? profile.unresolved : [];
     var evidence = Array.isArray(profile.evidence) ? profile.evidence : [];
-    var sampling = profile.sampling || {};
-    var observations = Array.isArray(profile.observations) ? profile.observations : [];
-    var sampledCount = Number(sampling.selectedCount || 0);
-    var observedCount = Number(sampling.successfulObservationCount || 0);
+    var codeExecutions = Array.isArray(profile.agentCodeExecutions) ? profile.agentCodeExecutions.filter(function (item) { return item && typeof item === "object"; }) : [];
+    var sampledImages = codeExecutions.reduce(function (total, item) {
+      return total + (Array.isArray(item.images) ? item.images.length : 0);
+    }, 0);
+    var executionItems = codeExecutions.map(function (item, index) {
+      var images = Array.isArray(item.images) ? item.images.filter(function (image) { return image && typeof image === "object"; }) : [];
+      var summary = typeof item.summary === "string" && item.summary.trim() ? item.summary.trim() : "未提供执行摘要。";
+      var artifacts = images.length
+        ? "已提交图片：" + images.map(function (image) {
+            var path = typeof image.path === "string" ? image.path : "未命名图片";
+            var size = Number(image.byteCount);
+            return path + (Number.isFinite(size) && size > 0 ? "（" + formatBytes(size) + "）" : "");
+          }).join("、")
+        : "本次未选择图片。";
+      return '<li><strong>第 ' + escapeHtml(String(index + 1)) + ' 次本地检查</strong><small>' + escapeHtml(artifacts) + '</small><p>' + escapeHtml(summary) + '</p></li>';
+    }).join("");
     var contentText = content.source === "semantic_agent"
       ? (content.description || profile.semanticDescription || "Agent 未提供内容描述。")
       : (content.message || content.reason || "尚未获得内容语义。");
@@ -520,19 +532,13 @@
       '<section class="semantic-description" data-testid="semantic-details-content-region"><h4>数据集描述</h4><p>' + escapeHtml(contentText) + '</p></section>' +
       '<section class="semantic-capabilities" data-testid="semantic-details-structure-region"><h4>可支持的任务</h4>' + semanticList(capabilities, "尚未确认可支持的任务") + '</section>' +
       '<div class="semantic-facts"><section><h4>数据特征</h4>' + semanticList(characteristics, "尚未形成明确特征") + '</section><section><h4>使用限制</h4>' + semanticList(limitations, "未发现明确限制") + '</section></div>' +
-      '<section class="semantic-sampling" data-testid="semantic-details-sampling-region"><div><h4>样本观察</h4><span>' + escapeHtml(String(sampledCount)) + ' 个样本 · ' + escapeHtml(String(observedCount)) + ' 个有效观察</span></div>' + (observations.length ? '<ul data-testid="semantic-details-sample-observation-list">' + observations.slice(0, 4).map(function (item) { return '<li>' + escapeHtml(observationText(item)) + '</li>'; }).join("") + '</ul>' : '<p>没有可用于视觉观察的样本，Agent 仅使用结构和文档证据。</p>') + '</section>' +
+      '<section class="semantic-agent-execution" data-testid="semantic-details-agent-execution-region"><div><h4>Agent 执行与图片采样</h4><span>' + escapeHtml(String(codeExecutions.length)) + ' 次本地检查 · ' + escapeHtml(String(sampledImages)) + ' 张提交给模型的真实图片</span></div>' + (executionItems ? '<ul data-testid="semantic-details-agent-execution-list">' + executionItems + '</ul>' : '<p>Agent 未执行本地数据检查；请重新分析以生成当前版本的交付记录。</p>') + '</section>' +
       '<section class="semantic-evidence" data-testid="semantic-details-evidence-region"><h4>证据与待确认事项</h4>' + (evidence.length ? '<ul class="evidence-list" data-testid="semantic-details-evidence-list">' + evidence.slice(0, 6).map(function (item) { return '<li>' + escapeHtml((item.id ? item.id + " · " : "") + (item.path || "证据") + " · " + (item.detail || item.kind || "")) + '</li>'; }).join("") + '</ul>' : '<p>没有可展示的证据。</p>') + '<h4 class="semantic-subheading">待确认事项</h4>' + semanticList(unknowns, "没有未解决事项", "semantic-details-unresolved-list") + '</section>' +
       '<button class="text-action semantic-refresh" type="button" data-semantic-analyze="' + escapeHtml(resourceId) + '" data-testid="semantic-details-reanalyze">重新分析</button></section>';
   }
   function semanticList(items, emptyText, testId) {
     var values = Array.isArray(items) ? items.filter(function (item) { return typeof item === "string" && item.trim(); }) : [];
     return values.length ? '<ul' + (testId ? ' data-testid="' + testId + '"' : "") + '>' + values.map(function (item) { return '<li>' + escapeHtml(item) + '</li>'; }).join("") + '</ul>' : '<p>' + escapeHtml(emptyText) + '</p>';
-  }
-  function observationText(item) {
-    if (!item || typeof item !== "object") return "样本观察格式无效";
-    var categories = Array.isArray(item.objectCategories) ? item.objectCategories.join("、") : "";
-    var environments = Array.isArray(item.environments) ? item.environments.join("、") : "";
-    return [categories, environments, item.targetScale, item.illumination && Array.isArray(item.illumination) ? item.illumination.join("、") : ""].filter(Boolean).join(" · ") || item.status || "已完成样本观察";
   }
   function renderDetail(resource) {
     var profile = profileOf(resource), kind = resource.kind, warnings = warningItems(resource);

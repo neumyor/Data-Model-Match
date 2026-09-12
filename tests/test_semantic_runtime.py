@@ -1,4 +1,3 @@
-import json
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -11,7 +10,6 @@ from datamodelmatch.semantic_runtime import (
     build_semantic_profile,
     get_semantic_profile,
 )
-from datamodelmatch.semantic_vision import VisualObservation
 
 
 def _record(resource_id: str) -> ResourceRecord:
@@ -48,7 +46,7 @@ class _Agent:
         refs = [item["id"] for item in context["evidence"]]
         return {
             "summary": "用于道路视觉任务的数据集。",
-            "semanticDescription": "Agent 基于文档、文件检查和可用视觉观察生成的描述。",
+            "semanticDescription": "Agent 基于文档、文件检查和本地代码执行生成的描述。",
             "capabilities": ["道路场景视觉分析"],
             "characteristics": ["包含图像及关联标注证据"],
             "limitations": ["标注语义仍需要按具体任务确认"],
@@ -91,9 +89,12 @@ class SemanticRuntimeTests(unittest.TestCase):
         self.assertEqual(profile["summary"], "用于道路视觉任务的数据集。")
         self.assertEqual(profile["agentAnalysis"]["capabilities"], ["道路场景视觉分析"])
         self.assertEqual(profile["content"]["source"], "semantic_agent")
+        self.assertEqual(profile["agentCodeExecutions"], [])
+        self.assertFalse({"sampling", "sampleRefs", "observations"} & set(profile))
         self.assertEqual(cached, profile)
         self.assertTrue(agent.context["inspections"])
         self.assertTrue(agent.context["evidence"][0]["id"].startswith("evidence_"))
+        self.assertNotIn("visualEvidence", agent.context)
 
     def test_agent_can_reference_all_bounded_snapshot_evidence(self) -> None:
         class AllEvidenceAgent(_Agent):
@@ -142,83 +143,3 @@ class SemanticRuntimeTests(unittest.TestCase):
                     config_path=Path(directory) / "missing-vlm.json",
                     agent_client=InvalidAgent(),
                 )
-
-    def test_includes_vlm_observation_as_agent_evidence_without_keyword_rules(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            store = ResourceStore(Path(directory) / "store")
-            record = _record("dataset_visual")
-            root = store.root / record.local_path
-            root.mkdir(parents=True)
-            (root / "image.png").write_bytes(
-                b"\x89PNG\r\n\x1a\n"
-                + b"\x00\x00\x00\rIHDR"
-                + (20).to_bytes(4, "big")
-                + (10).to_bytes(4, "big")
-                + bytes([8, 2])
-                + b"\x00\x00\x00\x00"
-            )
-            store.save(record, {"version": 1})
-            config_path = Path(directory) / "config.llm.json"
-            config_path.write_text(
-                json.dumps(
-                    {
-                        "vlm": {
-                            "version": 1,
-                            "provider": "test",
-                            "endpoint": "https://vision.invalid/v1/chat/completions",
-                            "apiKey": "not-a-real-key",
-                            "model": "test-vision",
-                            "imageInput": {"formats": ["png"], "maxBytes": 1024 * 1024},
-                            "videoInput": {
-                                "mode": "frames_only",
-                                "formats": ["mp4"],
-                                "maxBytes": 1024 * 1024,
-                                "maxDurationMs": 60000,
-                            },
-                            "limits": {
-                                "timeoutMs": 1000,
-                                "maxCallsPerStage": 3,
-                                "maxCostUsdPerJob": 1.0,
-                            },
-                            "retry": {"maxAttempts": 1, "baseDelayMs": 100},
-                        }
-                    }
-                ),
-                encoding="utf-8",
-            )
-
-            class FakeVlmClient:
-                def __init__(self, config):
-                    self.config = config
-
-                def observe_image(self, media, sample_ref, observation_id, evidence_ref, prompt):
-                    return VisualObservation(
-                        observation_id,
-                        sample_ref,
-                        ("car",),
-                        ("urban",),
-                        ("front",),
-                        "medium",
-                        "low",
-                        "rare",
-                        ("night",),
-                        "static",
-                        "slow",
-                        self.config.model,
-                        self.config.fingerprint,
-                        "COMPLETED",
-                        (evidence_ref,),
-                    )
-
-            agent = _Agent()
-            profile = build_semantic_profile(
-                store,
-                record.id,
-                config_path=config_path,
-                vlm_client_factory=FakeVlmClient,
-                agent_client=agent,
-            )
-
-        self.assertEqual(profile["analysisMode"], "agent_evidence+vlm")
-        self.assertEqual(profile["observations"][0]["status"], "COMPLETED")
-        self.assertTrue(agent.context["visualEvidence"]["observations"])
