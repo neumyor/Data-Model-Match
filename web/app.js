@@ -511,9 +511,11 @@
     var sampledImages = codeExecutions.reduce(function (total, item) {
       return total + (Array.isArray(item.images) ? item.images.length : 0);
     }, 0);
+    var deliveredImagesBefore = 0;
     var executionItems = codeExecutions.map(function (item, index) {
       var images = Array.isArray(item.images) ? item.images.filter(function (image) { return image && typeof image === "object"; }) : [];
       var summary = typeof item.summary === "string" && item.summary.trim() ? item.summary.trim() : "未提供执行摘要。";
+      var reachedImageLimit = item.imageAvailability === "sampled" && !images.length && deliveredImagesBefore >= 5;
       var artifacts = images.length
         ? "已提交图片：" + images.map(function (image) {
             var path = typeof image.path === "string" ? image.path : "未命名图片";
@@ -522,7 +524,10 @@
           }).join("、")
         : item.imageAvailability === "none_found"
           ? "代码已确认当前本地快照没有可读图片。"
+          : reachedImageLimit
+            ? "本次已识别图片，但已达到 5 张图片交付上限，未再次发送给模型。"
           : "本次未选择图片。";
+      deliveredImagesBefore += images.length;
       return '<li><strong>第 ' + escapeHtml(String(index + 1)) + ' 次本地检查</strong><small>' + escapeHtml(artifacts) + '</small><p>' + escapeHtml(summary) + '</p></li>';
     }).join("");
     var contentText = content.source === "semantic_agent"

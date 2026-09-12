@@ -199,6 +199,7 @@ describe("semantic UI acceptance manifest", () => {
     expect(appJs).toContain("证据与待确认事项");
     expect(appJs).toContain("Agent 执行与图片采样");
     expect(appJs).toContain("agentCodeExecutions");
+    expect(appJs).toContain("已达到 5 张图片交付上限");
     expect(appJs).not.toContain("没有可用于视觉观察的样本，Agent 仅使用结构和文档证据。");
     expect(appJs).toContain("原始字段与结构");
     expect(appJs.indexOf("semanticProfileSection(resource.semanticProfile, resource.id)")).toBeLessThan(
