@@ -28,7 +28,7 @@ class SemanticRuntimeError(ValueError):
 
 _MAX_INSPECTIONS = 24
 _MAX_DOCUMENT_BYTES = 24 * 1024
-_RUNTIME_VERSION = 7
+_RUNTIME_VERSION = 8
 _SECRET = re.compile(
     r"(?i)(authorization\s*:\s*bearer\s+|api[_ -]?key\s*[=:]\s*|"
     r"password\s*[=:]\s*|sk-[A-Za-z0-9_-]{8,})[^\s\"']+"
@@ -111,6 +111,7 @@ def build_semantic_profile(
             {
                 "summary": item.summary,
                 "images": [image.to_dict() for image in item.images],
+                "imageAvailability": item.image_availability,
             }
             for item in code_executions
         ],

@@ -57,11 +57,13 @@ class CodeExecution:
     summary: str
     images: tuple[SelectedImage, ...]
     stdout: str
+    image_availability: str = "not_checked"
 
     def tool_result(self) -> dict[str, object]:
         return {
             "summary": self.summary,
             "images": [item.to_dict() for item in self.images],
+            "imageAvailability": self.image_availability,
             "stdout": self.stdout,
         }
 
@@ -124,14 +126,19 @@ class DatasetCodeExecutor:
             return self._validate_result(raw, completed.stdout, work)
 
     def _validate_result(self, raw: object, stdout: bytes, work: Path) -> CodeExecution:
-        if not isinstance(raw, Mapping) or set(raw) != {"summary", "images"}:
-            raise DatasetCodeError("Agent Python result must contain only summary and images")
+        if not isinstance(raw, Mapping) or set(raw) != {"summary", "images", "imageStatus"}:
+            raise DatasetCodeError("Agent Python result must contain only summary, images, and imageStatus")
         summary = raw.get("summary")
         images = raw.get("images")
+        image_status = raw.get("imageStatus")
         if not isinstance(summary, str) or not summary.strip() or len(summary) > 2_000:
             raise DatasetCodeError("Agent Python result summary is invalid")
         if not isinstance(images, list) or len(images) > _MAX_IMAGES:
             raise DatasetCodeError("Agent Python selected an invalid number of images")
+        if image_status not in {"sampled", "not_checked", "none_found"}:
+            raise DatasetCodeError("Agent Python imageStatus is invalid")
+        if (bool(images) and image_status != "sampled") or (not images and image_status == "sampled"):
+            raise DatasetCodeError("Agent Python imageStatus does not match selected images")
         selected: list[SelectedImage] = []
         seen: set[str] = set()
         for item in images:
@@ -140,7 +147,7 @@ class DatasetCodeExecutor:
             seen.add(item)
             selected.append(self._read_image(item, work))
         text = stdout.decode("utf-8", errors="replace")[:4_000]
-        return CodeExecution(summary.strip(), tuple(selected), text)
+        return CodeExecution(summary.strip(), tuple(selected), text, image_status)
 
     def _read_image(self, relative: str, work: Path) -> SelectedImage:
         if not re.fullmatch(r"[^\x00]+", relative):

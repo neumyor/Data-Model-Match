@@ -319,6 +319,34 @@ class SemanticAgentClientTests(unittest.TestCase):
         self.assertEqual(executor.codes, ["first", "second"])
         self.assertEqual(len(executions), 2)
 
+    def test_multimodal_agent_accepts_a_code_established_no_image_result(self) -> None:
+        responses = iter([
+            _Response({"choices": [{"message": {"content": None, "tool_calls": [{
+                "id": "call_1",
+                "type": "function",
+                "function": {"name": "run_dataset_python", "arguments": json.dumps({"code": "inspect"})},
+            }]}}]}),
+            _Response({"choices": [{"message": {"content": json.dumps(_dataset_profile("no local image"))}}]}),
+            _Response({"choices": [{"message": {"content": json.dumps(_dataset_profile("no local image"))}}]}),
+        ])
+
+        class Executor:
+            def run(self, code):
+                return CodeExecution("Inspected all local files; none are readable images.", tuple(), "", "none_found")
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.llm.json"
+            _write_config(path)
+            result, executions = SemanticAgentClient.from_config(
+                path, transport=lambda request, timeout: next(responses)
+            ).analyze_dataset_with_code(
+                {"dataset": "metadata-only", "survey": {"imageCandidates": ["metadata.json"]}},
+                Executor(),
+            )
+
+        self.assertEqual(result["summary"], "no local image")
+        self.assertEqual(executions[0].image_availability, "none_found")
+
     def test_multimodal_agent_can_fix_a_failed_code_attempt(self) -> None:
         def tool_call(call_id):
             return {"choices": [{"message": {"content": None, "tool_calls": [{"id": call_id, "type": "function", "function": {"name": "run_dataset_python", "arguments": json.dumps({"code": "pass"})}}]}}]}

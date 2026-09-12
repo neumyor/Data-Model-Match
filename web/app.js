@@ -520,7 +520,9 @@
             var size = Number(image.byteCount);
             return path + (Number.isFinite(size) && size > 0 ? "（" + formatBytes(size) + "）" : "");
           }).join("、")
-        : "本次未选择图片。";
+        : item.imageAvailability === "none_found"
+          ? "代码已确认当前本地快照没有可读图片。"
+          : "本次未选择图片。";
       return '<li><strong>第 ' + escapeHtml(String(index + 1)) + ' 次本地检查</strong><small>' + escapeHtml(artifacts) + '</small><p>' + escapeHtml(summary) + '</p></li>';
     }).join("");
     var contentText = content.source === "semantic_agent"

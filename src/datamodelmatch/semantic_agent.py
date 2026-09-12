@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Callable, Mapping, Optional
+from typing import Callable, Iterable, Mapping, Optional
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -117,8 +117,11 @@ class SemanticAgentClient:
             "bytes, or image file means this requirement applies. Only return no images after code establishes that "
             "there are genuinely no readable images.\n"
             "3. Every tool program must finish by writing RESULT_PATH as UTF-8 JSON with exactly "
-            "{\"summary\":\"what this program established\",\"images\":[\"relative/path.png\"]}. Printing is not "
-            "a substitute and extra keys are not permitted. For images decoded from Parquet or another container, write "
+            "{\"summary\":\"what this program established\",\"images\":[\"relative/path.png\"],\"imageStatus\":\"sampled\"}. "
+            "Printing is not a substitute and extra keys are not permitted. imageStatus must be sampled when images are "
+            "returned, not_checked while the current program has not established image availability, or none_found only "
+            "after your code has inspected every relevant local file/container and established no readable image exists. "
+            "For images decoded from Parquet or another container, write "
             "them under AGENT_WORKDIR first, verify the file exists, then return work/<filename>. Never return a "
             "directory or an absolute path. The summary must be a concise, non-empty finding under 2,000 characters, "
             "not a JSON dump or verbose program log.\n"
@@ -207,6 +210,7 @@ class SemanticAgentClient:
                             execution.summary,
                             execution.images[:remaining_images],
                             execution.stdout,
+                            execution.image_availability,
                         )
                     executions.append(execution)
                     messages.append(
@@ -231,7 +235,7 @@ class SemanticAgentClient:
                     )
                     messages.append({"role": "user", "content": content})
                     sent_images += len(new_images)
-                elif requires_image_sample:
+                elif requires_image_sample and not _image_absence_confirmed(executions):
                     # Do not wait for the model to prematurely draft a profile
                     # before reminding it of the unmet image-delivery contract.
                     # This preserves the whole tool budget for useful inspection
@@ -253,7 +257,7 @@ class SemanticAgentClient:
                 continue
             if not tool_attempts:
                 raise SemanticAgentError("semantic Agent did not inspect the dataset with code")
-            if requires_image_sample and not selected_images:
+            if requires_image_sample and not selected_images and not _image_absence_confirmed(executions):
                 if tool_attempts >= _MAX_CODE_TOOL_CALLS:
                     raise SemanticAgentError(
                         "semantic Agent did not sample an image although supplied evidence indicates images"
@@ -492,8 +496,10 @@ _CODE_TOOL: dict[str, object] = {
         "description": (
             "Run Agent-authored Python locally. The code reads DATASET_ROOT and writes "
             "RESULT_PATH UTF-8 JSON as its LAST operation with exactly "
-            "{\"summary\": string, \"images\": string[]}; do not print a substitute result or add keys. "
-            "Select one to five readable image paths whenever images exist. For images decoded from containers, "
+            "{\"summary\": string, \"images\": string[], \"imageStatus\": \"sampled|not_checked|none_found\"}; "
+            "do not print a substitute result or add keys. Select one to five readable image paths whenever images exist. "
+            "Use none_found only after inspecting every relevant local file/container and confirming no readable image exists. "
+            "For images decoded from containers, "
             "write them under AGENT_WORKDIR and return work/<file-name>. DATASET_ROOT is read-only; never execute or "
             "modify dataset files."
         ),
@@ -540,4 +546,10 @@ def _code_failure_repair(error: str) -> str:
         return "Create the selected image file before writing RESULT_PATH, verify it is a file, then return its work/<filename> path."
     if "unsafe image path" in error:
         return "Return a relative work/<filename> path, never an absolute path or a path containing '..'."
+    if "imageStatus" in error:
+        return "Set imageStatus to sampled when returning images, not_checked while image availability is unresolved, or none_found only after inspecting all relevant local artifacts."
     return "Correct the manifest and rerun the inspection; keep the code focused on the real dataset record and required output contract."
+
+
+def _image_absence_confirmed(executions: Iterable[CodeExecution]) -> bool:
+    return any(item.image_availability == "none_found" for item in executions)
