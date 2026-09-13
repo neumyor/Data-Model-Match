@@ -23,7 +23,8 @@
       resource: null,
       status: "idle"
     },
-    discovery: { running: false }
+    discovery: { running: false, startedAt: 0, timer: null, messages: [] },
+    semanticProgress: { active: false, surface: null, phase: "sampling", messages: [], startedAt: 0, timer: null }
   };
   var labels = {
     dataset: { title: "数据集", empty: "还没有数据集。添加 Hugging Face 来源或本地目录，开始建立资源描述。" },
@@ -336,7 +337,7 @@
     }
   }
 
-  function resetImportTrace() { $("importTrace").hidden = false; $("importEvents").innerHTML = ""; $("importProgress").textContent = "准备中"; $("importProgressBar").style.width = "0%"; }
+  function resetImportTrace() { stopSemanticProgress(); $("importTrace").hidden = false; $("importEvents").innerHTML = ""; $("importProgress").textContent = "准备中"; $("importProgressBar").style.width = "0%"; $("importSemanticProgress").hidden = true; }
   function addImportEvent(message) {
     var target = $("importEvents"), item = document.createElement("div");
     item.className = "import-event"; item.textContent = message; target.appendChild(item); target.scrollTop = target.scrollHeight;
@@ -353,6 +354,75 @@
     var data = block.split(/\r?\n/).filter(function (line) { return line.indexOf("data:") === 0; }).map(function (line) { return line.slice(5).trim(); }).join("\n");
     if (!data || data === "[DONE]") return null;
     try { var parsed = JSON.parse(data); if (parsed && typeof parsed === "object") parsed.eventName = eventName; return parsed; } catch (error) { return { message: data, eventName: eventName }; }
+  }
+  function semanticElapsedSeconds() {
+    return state.semanticProgress.startedAt ? Math.max(0, Math.floor((Date.now() - state.semanticProgress.startedAt) / 1000)) : 0;
+  }
+  function semanticProgressContents() {
+    return '<div class="semantic-progress-head"><div><p class="overline">数据集语义分析</p><h3 data-semantic-progress-heading></h3></div><strong class="semantic-progress-elapsed" data-semantic-progress-elapsed></strong></div><ul class="semantic-progress-messages" data-semantic-progress-messages></ul><p class="semantic-progress-aggregation" data-semantic-progress-aggregation hidden>正在汇总图片观察、结构检查和其他证据。</p>';
+  }
+  function semanticProgressPanel() {
+    return state.semanticProgress.surface === "import"
+      ? $("importSemanticProgress")
+      : document.querySelector('[data-testid="semantic-details-job-progress"]');
+  }
+  function mountSemanticProgress() {
+    var panel = semanticProgressPanel();
+    if (!panel && state.semanticProgress.surface === "detail") {
+      $("detailContent").innerHTML = '<section class="semantic-progress" data-testid="semantic-details-job-progress" aria-live="polite">' + semanticProgressContents() + '</section>';
+      return semanticProgressPanel();
+    }
+    if (panel && !panel.querySelector("[data-semantic-progress-heading]")) panel.innerHTML = semanticProgressContents();
+    return panel;
+  }
+  function renderSemanticProgress() {
+    if (!state.semanticProgress.active) return;
+    var panel = mountSemanticProgress();
+    if (!panel) return;
+    panel.hidden = false;
+    var aggregating = state.semanticProgress.phase === "aggregation";
+    panel.querySelector("[data-semantic-progress-heading]").textContent = aggregating ? "正在聚合分析证据，生成最终分析结果" : "Agent 正在进行图片采样与分析";
+    panel.querySelector("[data-semantic-progress-elapsed]").textContent = "已运行 " + semanticElapsedSeconds() + " 秒";
+    var messages = panel.querySelector("[data-semantic-progress-messages]");
+    var aggregation = panel.querySelector("[data-semantic-progress-aggregation]");
+    messages.hidden = aggregating;
+    aggregation.hidden = !aggregating;
+    if (aggregating || messages.children.length === state.semanticProgress.messages.length) return;
+    var atBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 18;
+    if (messages.children.length > state.semanticProgress.messages.length) messages.textContent = "";
+    for (var index = messages.children.length; index < state.semanticProgress.messages.length; index += 1) {
+      var item = document.createElement("li");
+      item.textContent = state.semanticProgress.messages[index];
+      messages.appendChild(item);
+    }
+    if (atBottom) messages.scrollTop = messages.scrollHeight;
+  }
+  function startSemanticProgress(surface) {
+    stopSemanticProgress();
+    state.semanticProgress = {
+      active: true,
+      surface: surface,
+      phase: "sampling",
+      messages: ["Agent 正在准备图片采样与分析。"],
+      startedAt: Date.now(),
+      timer: setInterval(renderSemanticProgress, 1000)
+    };
+    renderSemanticProgress();
+  }
+  function updateSemanticProgress(event) {
+    if (!state.semanticProgress.active) return;
+    var phase = event.phase === "aggregation" ? "aggregation" : "sampling";
+    state.semanticProgress.phase = phase;
+    var message = typeof event.message === "string" ? event.message.trim() : "";
+    if (phase === "sampling" && message && state.semanticProgress.messages[state.semanticProgress.messages.length - 1] !== message) {
+      state.semanticProgress.messages.push(message.slice(0, 500));
+    }
+    renderSemanticProgress();
+  }
+  function stopSemanticProgress() {
+    if (state.semanticProgress.timer) clearInterval(state.semanticProgress.timer);
+    state.semanticProgress.timer = null;
+    state.semanticProgress.active = false;
   }
   async function consumeSse(response, handlers) {
     var contentType = response.headers.get("content-type") || "";
@@ -446,6 +516,10 @@
         event: function (event) {
           if (event.eventName === "result" || event.result || event.resource) result = event.resource ? event : event.result || event;
           else if (event.eventName === "error" || event.error) failure = event.message || event.error;
+          else if (event.eventName === "semantic-progress") {
+            if (!state.semanticProgress.active) startSemanticProgress("import");
+            updateSemanticProgress(event);
+          }
           else applySseProgress(event);
         }
       });
@@ -455,10 +529,11 @@
         var existing = state.resources[state.drawerKind].findIndex(function (item) { return item.id === resource.id; });
         if (existing >= 0) state.resources[state.drawerKind][existing] = resource; else state.resources[state.drawerKind].unshift(resource);
         $("importProgressBar").style.width = "100%"; $("importProgress").textContent = "已完成"; addImportEvent("资源描述已生成，可以查看详情");
+        stopSemanticProgress();
         renderResourceGrid(state.drawerKind); populateResourceSelects(); showToast("已添加" + labels[state.drawerKind].title); setTimeout(closeDrawers, 520);
       } else { addImportEvent("服务已结束，但没有返回资源记录"); showToast("导入完成但缺少资源记录"); }
     } catch (error) { addImportEvent("处理失败：" + error.message); $("importProgress").textContent = "失败"; showToast("资源导入失败：" + error.message); }
-    finally { $("importResource").disabled = false; $("importResource").textContent = "开始解析"; }
+    finally { stopSemanticProgress(); $("importResource").disabled = false; $("importResource").textContent = "开始解析"; }
   }
 
   async function openDetail(kind, id) {
@@ -481,19 +556,30 @@
   async function runSemanticAnalysis(resourceId) {
     var buttons = all("[data-semantic-analyze]");
     buttons.forEach(function (button) { button.disabled = true; button.textContent = "分析中…"; });
+    startSemanticProgress("detail");
     try {
       var response = await request("/api/dataset-semantic-profiles/jobs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resourceId: resourceId })
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream, application/json" },
+        body: JSON.stringify({ resourceId: resourceId, force: true })
       });
-      var payload = await response.json();
-      if (!payload.profile) throw new Error("服务未返回语义档案");
+      var profile = null, failure = null;
+      await consumeSse(response, {
+        data: function (data) { profile = data.profile || null; },
+        event: function (event) {
+          if (event.eventName === "semantic-progress") updateSemanticProgress(event);
+          else if (event.eventName === "result") profile = event.profile || null;
+          else if (event.eventName === "error" || event.error) failure = event.message || event.error;
+        }
+      });
+      if (failure) throw new Error(typeof failure === "string" ? failure : failure.message || "语义分析失败");
+      if (!profile) throw new Error("服务未返回语义档案");
       showToast("数据集语义分析已完成");
       await openDetail("dataset", resourceId);
     } catch (error) {
       showToast("语义分析失败：" + error.message);
     } finally {
+      stopSemanticProgress();
       buttons.forEach(function (button) { button.disabled = false; button.textContent = "生成语义分析"; });
     }
   }
@@ -507,29 +593,6 @@
     var limitations = Array.isArray(analysis.limitations) ? analysis.limitations : [];
     var unknowns = Array.isArray(profile.unresolved) ? profile.unresolved : [];
     var evidence = Array.isArray(profile.evidence) ? profile.evidence : [];
-    var codeExecutions = Array.isArray(profile.agentCodeExecutions) ? profile.agentCodeExecutions.filter(function (item) { return item && typeof item === "object"; }) : [];
-    var sampledImages = codeExecutions.reduce(function (total, item) {
-      return total + (Array.isArray(item.images) ? item.images.length : 0);
-    }, 0);
-    var deliveredImagesBefore = 0;
-    var executionItems = codeExecutions.map(function (item, index) {
-      var images = Array.isArray(item.images) ? item.images.filter(function (image) { return image && typeof image === "object"; }) : [];
-      var summary = typeof item.summary === "string" && item.summary.trim() ? item.summary.trim() : "未提供执行摘要。";
-      var reachedImageLimit = item.imageAvailability === "sampled" && !images.length && deliveredImagesBefore >= 5;
-      var artifacts = images.length
-        ? "已提交图片：" + images.map(function (image) {
-            var path = typeof image.path === "string" ? image.path : "未命名图片";
-            var size = Number(image.byteCount);
-            return path + (Number.isFinite(size) && size > 0 ? "（" + formatBytes(size) + "）" : "");
-          }).join("、")
-        : item.imageAvailability === "none_found"
-          ? "代码已确认当前本地快照没有可读图片。"
-          : reachedImageLimit
-            ? "本次已识别图片，但已达到 5 张图片交付上限，未再次发送给模型。"
-          : "本次未选择图片。";
-      deliveredImagesBefore += images.length;
-      return '<li><strong>第 ' + escapeHtml(String(index + 1)) + ' 次本地检查</strong><small>' + escapeHtml(artifacts) + '</small><p>' + escapeHtml(summary) + '</p></li>';
-    }).join("");
     var contentText = content.source === "semantic_agent"
       ? (content.description || profile.semanticDescription || "Agent 未提供内容描述。")
       : (content.message || content.reason || "尚未获得内容语义。");
@@ -539,7 +602,6 @@
       '<section class="semantic-description" data-testid="semantic-details-content-region"><h4>数据集描述</h4><p>' + escapeHtml(contentText) + '</p></section>' +
       '<section class="semantic-capabilities" data-testid="semantic-details-structure-region"><h4>可支持的任务</h4>' + semanticList(capabilities, "尚未确认可支持的任务") + '</section>' +
       '<div class="semantic-facts"><section><h4>数据特征</h4>' + semanticList(characteristics, "尚未形成明确特征") + '</section><section><h4>使用限制</h4>' + semanticList(limitations, "未发现明确限制") + '</section></div>' +
-      '<section class="semantic-agent-execution" data-testid="semantic-details-agent-execution-region"><div><h4>Agent 执行与图片采样</h4><span>' + escapeHtml(String(codeExecutions.length)) + ' 次本地检查 · ' + escapeHtml(String(sampledImages)) + ' 张提交给模型的真实图片</span></div>' + (executionItems ? '<ul data-testid="semantic-details-agent-execution-list">' + executionItems + '</ul>' : '<p>Agent 未执行本地数据检查；请重新分析以生成当前版本的交付记录。</p>') + '</section>' +
       '<section class="semantic-evidence" data-testid="semantic-details-evidence-region"><h4>证据与待确认事项</h4>' + (evidence.length ? '<ul class="evidence-list" data-testid="semantic-details-evidence-list">' + evidence.slice(0, 6).map(function (item) { return '<li>' + escapeHtml((item.id ? item.id + " · " : "") + (item.path || "证据") + " · " + (item.detail || item.kind || "")) + '</li>'; }).join("") + '</ul>' : '<p>没有可展示的证据。</p>') + '<h4 class="semantic-subheading">待确认事项</h4>' + semanticList(unknowns, "没有未解决事项", "semantic-details-unresolved-list") + '</section>' +
       '<button class="text-action semantic-refresh" type="button" data-semantic-analyze="' + escapeHtml(resourceId) + '" data-testid="semantic-details-reanalyze">重新分析</button></section>';
   }
@@ -567,7 +629,7 @@
   }
 
   function renderTaskDiscovery(payload) {
-    var matches = Array.isArray(payload.matches) ? payload.matches : [];
+    var matches = Array.isArray(payload.matches) ? payload.matches.slice(0, 3) : [];
     $("taskDiscoveryCount").textContent = matches.length + " 个数据集";
     if (!matches.length) {
       $("taskDiscoveryResults").innerHTML = '<div class="empty-resource"><div class="empty-state compact"><span class="empty-symbol">○</span><p>当前没有可分析的数据集。</p></div></div>';
@@ -590,6 +652,48 @@
     }).join("");
     bindDynamicButtons();
   }
+  function taskDiscoveryElapsedSeconds() {
+    return state.discovery.startedAt ? Math.max(0, Math.floor((Date.now() - state.discovery.startedAt) / 1000)) : 0;
+  }
+  function renderTaskDiscoveryProgress(event) {
+    if (!state.discovery.running) return;
+    var panel = $("taskDiscoveryProgress");
+    panel.hidden = false;
+    var stage = event && typeof event.stage === "string" ? event.stage : "prepare";
+    var heading = stage === "failed" ? "任务匹配未完成" : stage === "agent" ? "Agent 正在比较证据并排序" : stage === "validation" ? "正在校验排序结果" : "正在准备候选数据集证据";
+    var summary = stage === "failed"
+      ? "本次未生成可校验的排序结果；请根据下方提示重试。"
+      : stage === "agent"
+      ? "Agent 正在依据任务目标、数据集能力、局限和已记录证据，对所有候选集进行排序。"
+      : stage === "validation"
+      ? "正在确认排名前三的候选都有结论、评分、可追溯证据和明确的不确定性。"
+        : "正在读取每个候选数据集当前版本的语义档案；缺少档案时会先生成它。";
+    $("taskDiscoveryProgressHeading").textContent = heading;
+    $("taskDiscoveryProgressElapsed").textContent = "已运行 " + taskDiscoveryElapsedSeconds() + " 秒";
+    $("taskDiscoveryProgressSummary").textContent = summary;
+    var message = event && typeof event.message === "string" ? event.message.trim() : "";
+    if (!message || state.discovery.messages[state.discovery.messages.length - 1] === message) return;
+    state.discovery.messages.push(message.slice(0, 500));
+    var messages = $("taskDiscoveryProgressMessages");
+    var atBottom = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 18;
+    var item = document.createElement("li");
+    item.textContent = message.slice(0, 500);
+    messages.appendChild(item);
+    if (atBottom) messages.scrollTop = messages.scrollHeight;
+  }
+  function startTaskDiscoveryProgress() {
+    if (state.discovery.timer) clearInterval(state.discovery.timer);
+    state.discovery.startedAt = Date.now();
+    state.discovery.messages = [];
+    $("taskDiscoveryProgressMessages").textContent = "";
+    $("taskDiscoveryProgress").hidden = false;
+    state.discovery.timer = setInterval(function () { renderTaskDiscoveryProgress(); }, 1000);
+    renderTaskDiscoveryProgress({ stage: "prepare", message: "开始读取待排序的数据集。" });
+  }
+  function stopTaskDiscoveryProgress() {
+    if (state.discovery.timer) clearInterval(state.discovery.timer);
+    state.discovery.timer = null;
+  }
   async function runTaskDiscovery() {
     var text = $("taskDiscoveryInput").value.trim();
     if (!text) { showToast("请先描述目标任务"); return; }
@@ -599,21 +703,34 @@
     $("runTaskDiscovery").textContent = "分析中…";
     $("taskDiscoveryStatus").className = "status-pill profiling";
     $("taskDiscoveryStatus").textContent = "Agent 正在理解任务与数据集";
+    startTaskDiscoveryProgress();
     try {
       var response = await request("/api/dataset-task-matches", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream, application/json" },
         body: JSON.stringify({ text: text })
       });
-      renderTaskDiscovery(await response.json());
+      var result = null, failure = null;
+      await consumeSse(response, {
+        data: function (data) { result = data; },
+        event: function (event) {
+          if (event.eventName === "result" || Array.isArray(event.matches)) result = event.result || event;
+          else if (event.eventName === "error" || event.error) failure = event.message || event.error;
+          else if (event.eventName !== "end") renderTaskDiscoveryProgress(event);
+        }
+      });
+      if (failure) throw new Error(typeof failure === "string" ? failure : failure.message || "任务匹配失败");
+      renderTaskDiscovery(result || { matches: [] });
       $("taskDiscoveryStatus").className = "status-pill compatible";
       $("taskDiscoveryStatus").textContent = "Agent 结论已更新";
     } catch (error) {
       $("taskDiscoveryStatus").className = "status-pill failed";
       $("taskDiscoveryStatus").textContent = "分析失败";
+      renderTaskDiscoveryProgress({ stage: "failed", message: "任务匹配未完成：" + (error.message || "服务未返回可用结果") });
       showToast("任务匹配失败：" + error.message);
     } finally {
       state.discovery.running = false;
+      stopTaskDiscoveryProgress();
       $("runTaskDiscovery").disabled = false;
       $("runTaskDiscovery").innerHTML = '查找数据集 <span>→</span>';
     }

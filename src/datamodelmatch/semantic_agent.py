@@ -28,6 +28,17 @@ _MAX_MULTIMODAL_IMAGES = 5
 Transport = Callable[[Request, float], object]
 
 
+def _notify_progress(
+    callback: Optional[Callable[[str, str], None]],
+    phase: str,
+    message: str,
+) -> None:
+    """Expose concise Agent findings, never prompts, code, or raw model output."""
+
+    if callback is not None and isinstance(message, str) and message.strip():
+        callback(phase, message.strip()[:500])
+
+
 class SemanticAgentClient:
     """Small OpenAI Chat Completions client with a JSON-object-only contract."""
 
@@ -89,6 +100,8 @@ class SemanticAgentClient:
         self,
         context: Mapping[str, object],
         executor: DatasetCodeExecutor,
+        *,
+        on_progress: Optional[Callable[[str, str], None]] = None,
     ) -> tuple[Mapping[str, object], tuple[CodeExecution, ...]]:
         """Let the multimodal Agent write bounded Python before profiling.
 
@@ -150,6 +163,7 @@ class SemanticAgentClient:
         sent_images = 0
         tool_attempts = 0
         requires_image_sample = _requires_image_sample(context)
+        _notify_progress(on_progress, "sampling", "Agent 正在规划图片采样和本地数据检查。")
         for _ in range(_MAX_CODE_TOOL_CALLS + 1):
             message = self._request_message(
                 messages,
@@ -184,10 +198,12 @@ class SemanticAgentClient:
                         )
                         continue
                     tool_attempts += 1
+                    _notify_progress(on_progress, "sampling", f"Agent 正在进行第 {tool_attempts} 次本地图片采样检查。")
                     try:
                         arguments = json.loads(function.get("arguments", ""))
                         execution = executor.run(arguments.get("code") if isinstance(arguments, Mapping) else None)
                     except (json.JSONDecodeError, DatasetCodeError) as exc:
+                        _notify_progress(on_progress, "sampling", "本次本地检查未完成，Agent 正在调整检查方法。")
                         messages.append(
                             {
                                 "role": "tool",
@@ -213,6 +229,7 @@ class SemanticAgentClient:
                             execution.image_availability,
                         )
                     executions.append(execution)
+                    _notify_progress(on_progress, "sampling", execution.summary)
                     messages.append(
                         {
                             "role": "tool",
@@ -276,6 +293,7 @@ class SemanticAgentClient:
                     }
                 )
                 continue
+            _notify_progress(on_progress, "aggregation", "正在聚合分析证据，生成最终分析结果")
             return self._finalize_dataset_profile(context, executions, selected_images), tuple(executions)
         raise SemanticAgentError("semantic Agent did not finish after code inspection")
 
@@ -348,6 +366,32 @@ class SemanticAgentClient:
                 "candidate dataset profiles using their semantic meaning, "
                 "state uncertainty and incompatibilities explicitly, and "
                 "return a justified ranking."
+            ),
+        )
+
+    def repair_task_match(
+        self,
+        context: Mapping[str, object],
+        validation_error: str,
+    ) -> Mapping[str, object]:
+        """Request one contract-focused correction after a rejected ranking.
+
+        The rejected model output is intentionally not sent back.  The Agent
+        receives only the original bounded evidence and a sanitized validation
+        rule, so it cannot treat a malformed response as authority.
+        """
+
+        safe_error = validation_error.strip()[:300] if isinstance(validation_error, str) else "结果不符合返回合同"
+        repair_context = dict(context)
+        repair_context["validationFailure"] = safe_error
+        return self._request_json(
+            "task_dataset_match_repair",
+            repair_context,
+            (
+                "You are correcting a dataset recommendation response that failed validation. "
+                "Compare every supplied candidate, then return exactly the number of top matches specified by "
+                "maximumResults. Preserve descending scores and cite only each candidate's "
+                "allowedEvidenceRefs. Do not explain the correction outside the required JSON object."
             ),
         )
 

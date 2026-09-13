@@ -257,7 +257,9 @@ function serializeEvent(event: ServerEvent): Uint8Array {
 
 function resourceCommand(args: string[]): string[] {
   return [
-    process.env.PYTHON ?? "python3",
+    "uv",
+    "run",
+    "python",
     "-m",
     "datamodelmatch.resource_cli",
     "--store",
@@ -949,7 +951,7 @@ const server = Bun.serve({
         }
         const args = ["semantic-profile", resourceId];
         if (body.force === true) args.push("--force");
-        return jsonResponse(await runResourceJson(args));
+        return runResourceStream(args);
       } catch (error) {
         if (error instanceof RequestError) {
           return errorResponse(error.code, error.message, error.status);
@@ -987,7 +989,7 @@ const server = Bun.serve({
         if (!text) {
           throw new RequestError("INVALID_INPUT", "任务描述不能为空", 400);
         }
-        return jsonResponse(await runResourceJson(["dataset-task-match", text]));
+        return runResourceStream(["dataset-task-match", "--stream", text]);
       } catch (error) {
         if (error instanceof RequestError) {
           return errorResponse(error.code, error.message, error.status);

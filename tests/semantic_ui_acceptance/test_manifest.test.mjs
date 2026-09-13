@@ -100,7 +100,6 @@ describe("semantic UI acceptance manifest", () => {
       "semantic-details-profile-status",
       "semantic-details-structure-region",
       "semantic-details-content-region",
-      "semantic-details-agent-execution-region",
       "semantic-details-evidence-region",
       "semantic-details-job-progress",
       "task-discovery-root",
@@ -119,8 +118,8 @@ describe("semantic UI acceptance manifest", () => {
     }
   });
 
-  test("freezes exactly four ordered details review regions", () => {
-    expect(manifest.reviewRegions).toHaveLength(4);
+  test("freezes exactly three completed details review regions", () => {
+    expect(manifest.reviewRegions).toHaveLength(3);
     expect(manifest.reviewRegions.map((item) => item.id)).toEqual(
       manifest.requiredCoverage.reviewRegionIds
     );
@@ -197,13 +196,27 @@ describe("semantic UI acceptance manifest", () => {
     expect(appJs).toContain("Agent 语义分析");
     expect(appJs).toContain("可支持的任务");
     expect(appJs).toContain("证据与待确认事项");
-    expect(appJs).toContain("Agent 执行与图片采样");
-    expect(appJs).toContain("agentCodeExecutions");
-    expect(appJs).toContain("已达到 5 张图片交付上限");
+    expect(appJs).not.toContain("Agent 执行与图片采样");
+    expect(appJs).not.toContain("semantic-details-agent-execution-region");
     expect(appJs).not.toContain("没有可用于视觉观察的样本，Agent 仅使用结构和文档证据。");
     expect(appJs).toContain("原始字段与结构");
     expect(appJs.indexOf("semanticProfileSection(resource.semanticProfile, resource.id)")).toBeLessThan(
       appJs.indexOf("原始字段与结构")
     );
+  });
+
+  test("updates semantic progress in place without resetting message-list scrolling", () => {
+    expect(appJs).toContain("data-semantic-progress-messages");
+    expect(appJs).toContain("messages.scrollTop = messages.scrollHeight");
+    expect(appJs).not.toContain("outerHTML = semanticProgressMarkup");
+  });
+
+  test("shows stream-backed task-discovery progress without forcing the message list to scroll", () => {
+    expect(indexHtml).toContain('data-testid="task-discovery-job-progress"');
+    expect(appJs).toContain("startTaskDiscoveryProgress()");
+    expect(appJs).toContain("renderTaskDiscoveryProgress(event)");
+    expect(appJs).toContain("Agent 正在依据任务目标、数据集能力、局限和已记录证据，对所有候选集进行排序。");
+    expect(appJs).toContain('Accept: "text/event-stream, application/json"');
+    expect(appJs).toContain("if (atBottom) messages.scrollTop = messages.scrollHeight");
   });
 });

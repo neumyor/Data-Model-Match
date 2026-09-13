@@ -143,12 +143,6 @@
       "purpose": "Fixed review region: content semantics."
     },
     {
-      "id": "semantic-details-agent-execution-region",
-      "selector": "[data-testid=\"semantic-details-agent-execution-region\"]",
-      "workflow": "semantic-profile-details-review",
-      "purpose": "Fixed review region: Agent-authored local execution and selected image artifacts."
-    },
-    {
       "id": "semantic-details-evidence-region",
       "selector": "[data-testid=\"semantic-details-evidence-region\"]",
       "workflow": "semantic-profile-details-review",
@@ -159,12 +153,6 @@
       "selector": "[data-testid=\"semantic-details-claim-list\"]",
       "workflow": "semantic-profile-details-review",
       "purpose": "List of field-level claims with value, evidence status, and provenance."
-    },
-    {
-      "id": "semantic-details-agent-execution-list",
-      "selector": "[data-testid=\"semantic-details-agent-execution-list\"]",
-      "workflow": "semantic-profile-details-review",
-      "purpose": "Per-execution summaries and selected image artifact metadata."
     },
     {
       "id": "semantic-details-evidence-list",
@@ -295,18 +283,6 @@
       ]
     },
     {
-      "id": "agent-execution-and-images",
-      "selectorId": "semantic-details-agent-execution-region",
-      "heading": "Agent 执行与图片采样",
-      "mustShow": [
-        "executionCount",
-        "selectedImageCount",
-        "executionSummary",
-        "imageArtifactMetadata",
-        "noImageExecutionReason"
-      ]
-    },
-    {
       "id": "evidence-and-unresolved",
       "selectorId": "semantic-details-evidence-region",
       "heading": "证据与未解决问题",
@@ -321,9 +297,9 @@
   ],
   "workflowRequirements": {
     "semantic-profile-details-review": [
-      "The four fixed review regions are present in the declared order: structure, content, agent-execution-and-images, evidence-and-unresolved.",
+      "The three completed-analysis review regions are present in the declared order: structure, content, evidence-and-unresolved. Runtime Agent progress is displayed separately while analysis is running.",
       "The currently displayed snapshotRevision and profile revision are visible before a user reviews claims.",
-      "No content-semantic claim may be styled or labelled as a deterministic fact; Agent code-execution summaries and image artifacts remain visibly distinct from dataset-level claims.",
+      "No content-semantic claim may be styled or labelled as a deterministic fact; runtime Agent messages are visibly identified as progress, not dataset-level claims.",
       "UNKNOWN remains visible with its controlled reason and available next action; it cannot be hidden by an empty state.",
       "A failed or partially completed job cannot replace the last complete profile. The UI identifies the active artifact and any prior complete revision.",
       "Reanalyze, cancel, and retry controls appear only when their job state permits the action, but retain their stable selector whenever rendered."
@@ -424,7 +400,6 @@
         "semantic-details-reanalyze",
         "semantic-details-structure-region",
         "semantic-details-content-region",
-        "semantic-details-agent-execution-region",
         "semantic-details-evidence-region"
       ]
     },
@@ -447,7 +422,7 @@
         "semantic-details-root",
         "semantic-details-cancel",
         "semantic-details-job-progress",
-        "semantic-details-agent-execution-region"
+        "semantic-details-job-progress"
       ]
     },
     {
@@ -457,7 +432,6 @@
       "requiredSelectorIds": [
         "semantic-details-root",
         "semantic-details-content-region",
-        "semantic-details-agent-execution-list",
         "semantic-details-unresolved-list",
         "semantic-details-job-progress"
       ]
@@ -533,7 +507,6 @@
       "state": "no_samples",
       "requiredSelectorIds": [
         "semantic-details-root",
-        "semantic-details-agent-execution-region",
         "semantic-details-unresolved-list"
       ]
     },
@@ -648,7 +621,6 @@
     "reviewRegionIds": [
       "structure",
       "content",
-      "agent-execution-and-images",
       "evidence-and-unresolved"
     ],
     "workflowIds": [

@@ -9,6 +9,7 @@ description = "Match datasets with deep-learning models using static analysis an
 requires-python = ">=3.9"
 dependencies = [
     "pyarrow>=14.0.0",
+    "Pillow>=10.0.0",
 ]
 
 [project.scripts]

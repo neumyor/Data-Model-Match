@@ -13,7 +13,7 @@ import re
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Optional
+from typing import Any, Callable, Iterable, Mapping, Optional
 
 from .resource_store import ResourceStore
 from .semantic_inspection import InspectionResult, inspect_file
@@ -33,6 +33,23 @@ _SECRET = re.compile(
     r"(?i)(authorization\s*:\s*bearer\s+|api[_ -]?key\s*[=:]\s*|"
     r"password\s*[=:]\s*|sk-[A-Za-z0-9_-]{8,})[^\s\"']+"
 )
+SemanticProgressReporter = Callable[[str, str], None]
+
+
+def _report_progress(
+    reporter: Optional[SemanticProgressReporter],
+    phase: str,
+    message: str,
+) -> None:
+    """Publish a short, sanitized status without exposing prompts or raw output."""
+
+    if reporter is None:
+        return
+    safe = _SECRET.sub(r"\1[已隐藏]", message).strip()
+    if safe:
+        reporter(phase, safe[:500])
+
+
 def build_semantic_profile(
     store: ResourceStore,
     resource_id: str,
@@ -40,6 +57,7 @@ def build_semantic_profile(
     force: bool = False,
     config_path: Path | str = "config.llm.json",
     agent_client: Optional[SemanticAgentClient] = None,
+    progress_reporter: Optional[SemanticProgressReporter] = None,
 ) -> dict[str, object]:
     """Build and persist one Agent-authored semantic profile for a dataset."""
 
@@ -48,9 +66,11 @@ def build_semantic_profile(
         raise SemanticRuntimeError("语义分析仅支持数据集资源")
     cached = _load_cached_profile(store, record.id, record.resolved_revision)
     if cached is not None and not force:
+        _report_progress(progress_reporter, "aggregation", "已找到当前快照的既有分析结果，正在载入。")
         return cached
 
     root = store.resource_path(record.id)
+    _report_progress(progress_reporter, "sampling", "Agent 正在检查数据集结构，准备图片采样与分析。")
     sketch = survey_snapshot(root)
     inspections = _inspect_candidates(root, sketch)
     imported_profile = store.load_profile(record.id)
@@ -71,6 +91,7 @@ def build_semantic_profile(
         sketch,
         inspections,
         evidence,
+        progress_reporter,
     )
     content = {
         "status": "AGENT_ANALYZED",
@@ -147,6 +168,7 @@ def _analyze_dataset(
     sketch: DatasetSketch,
     inspections: Iterable[InspectionResult],
     evidence: list[dict[str, object]],
+    progress_reporter: Optional[SemanticProgressReporter],
 ) -> tuple[dict[str, object], tuple[CodeExecution, ...]]:
     """Turn bounded evidence into one portable dataset description."""
 
@@ -184,8 +206,13 @@ def _analyze_dataset(
     try:
         code_agent = getattr(agent, "analyze_dataset_with_code", None)
         if callable(code_agent):
-            raw, code_executions = code_agent(context, DatasetCodeExecutor(root))
+            raw, code_executions = code_agent(
+                context,
+                DatasetCodeExecutor(root),
+                on_progress=lambda phase, message: _report_progress(progress_reporter, phase, message),
+            )
         else:
+            _report_progress(progress_reporter, "aggregation", "正在聚合分析证据，生成最终分析结果")
             raw = agent.analyze_dataset(context)
             code_executions = tuple()
     except SemanticAgentError as exc:

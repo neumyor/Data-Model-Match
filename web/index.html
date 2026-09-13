@@ -42,6 +42,11 @@
               <label class="field-label" for="taskDiscoveryInput">任务描述</label>
               <textarea id="taskDiscoveryInput" data-testid="task-discovery-query-input" rows="4" placeholder="例如：寻找用于夜间车辆目标检测的视频数据集，需要边界框标注。"></textarea>
               <div class="discovery-actions"><span id="taskDiscoveryStatus" class="status-pill neutral">等待任务描述</span><button id="runTaskDiscovery" data-testid="task-discovery-run" class="primary-button" type="button">查找数据集 <span>→</span></button></div>
+              <section id="taskDiscoveryProgress" data-testid="task-discovery-job-progress" class="discovery-progress" aria-live="polite" hidden>
+                <div class="semantic-progress-head"><div><p class="overline">任务匹配进度</p><h3 id="taskDiscoveryProgressHeading">正在准备匹配</h3></div><strong id="taskDiscoveryProgressElapsed" class="semantic-progress-elapsed">已运行 0 秒</strong></div>
+                <p id="taskDiscoveryProgressSummary" class="discovery-progress-summary">正在读取可用于比较的数据集语义档案。</p>
+                <ul id="taskDiscoveryProgressMessages" class="semantic-progress-messages"></ul>
+              </section>
             </section>
             <section class="discovery-results">
               <div class="panel-heading"><div><p class="overline">Agent 推荐结果</p><h3>按语义理解给出结论</h3></div><span id="taskDiscoveryCount" class="muted-count">未开始</span></div>
@@ -111,7 +116,7 @@
         <select id="sourceTypeSelect" class="source-type-select"></select>
         <div id="searchResults" class="search-results" hidden></div>
         <details class="advanced-block"><summary>高级导入设置</summary><div class="advanced-fields"><label>固定版本 / 分支<input id="revisionInput" type="text" placeholder="默认使用仓库当前版本"></label><label>下载策略<select id="downloadMode"><option value="sample" selected>抽样下载（推荐）</option><option value="metadata">仅元数据</option><option value="full">完整资源</option></select></label></div></details>
-        <div id="importTrace" class="import-trace" hidden><div class="trace-title"><span>导入进度</span><span id="importProgress">准备中</span></div><div class="progress-track"><span id="importProgressBar"></span></div><div id="importEvents" class="import-events"></div></div>
+        <div id="importTrace" class="import-trace" hidden><div class="trace-title"><span>导入进度</span><span id="importProgress">准备中</span></div><div class="progress-track"><span id="importProgressBar"></span></div><div id="importEvents" class="import-events"></div><section id="importSemanticProgress" class="semantic-progress" hidden aria-live="polite"></section></div>
       </div>
       <div class="drawer-foot"><button class="quiet-button" type="button" data-close>取消</button><button id="importResource" class="primary-button" type="button">开始解析</button></div>
     </aside>

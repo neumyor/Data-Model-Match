@@ -217,12 +217,15 @@ class SemanticAgentClientTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "config.llm.json"
             _write_config(path)
+            progress = []
             result, executions = SemanticAgentClient.from_config(path, transport=transport).analyze_dataset_with_code(
-                {"dataset": "demo"}, Executor()
+                {"dataset": "demo"}, Executor(), on_progress=lambda phase, message: progress.append((phase, message))
             )
 
         self.assertEqual(result["summary"], "ok")
         self.assertEqual(len(executions), 1)
+        self.assertIn(("sampling", "Found one image."), progress)
+        self.assertEqual(progress[-1], ("aggregation", "正在聚合分析证据，生成最终分析结果"))
         self.assertEqual(captured[0]["tools"][0]["function"]["name"], "run_dataset_python")
         self.assertEqual(captured[1]["messages"][-1]["content"][1]["image_url"]["url"], "data:image/png;base64,AA==")
 

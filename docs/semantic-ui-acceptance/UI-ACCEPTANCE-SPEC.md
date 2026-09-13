@@ -76,22 +76,22 @@ do not replace visible labels or accessible names.
 
 ## Dataset Details Review
 
-The semantic-profile details surface always has four fixed, ordered review regions:
+The completed semantic-profile details surface always has three fixed, ordered review regions:
 
 1. `semantic-details-structure-region` / `结构语义`
 2. `semantic-details-content-region` / `内容语义`
-3. `semantic-details-agent-execution-region` / `Agent 执行与图片采样`
-4. `semantic-details-evidence-region` / `证据与未解决问题`
+3. `semantic-details-evidence-region` / `证据与未解决问题`
 
 Each region's required content appears in `reviewRegions` in the manifest. The UI
 must show snapshot and profile revision before a reviewer interprets a claim.
 
-Agent code-execution summaries and selected image artifacts are never presented as
-dataset-level facts. The execution region exposes how many local checks ran, how many
-real images were submitted to the model, and the path/size metadata for each selected
-artifact. Dataset-level claims retain their evidence references and `UNKNOWN` reason
-where applicable. A failed or partially completed job cannot overwrite or visually
-impersonate the last complete profile.
+During analysis, `semantic-details-job-progress` instead shows a two-stage progress
+surface: safe Agent-authored local inspection summaries during image sampling, followed
+by a fixed evidence-aggregation message and elapsed time. It never exposes prompts,
+generated code, raw model responses, stdout, image contents, or internal reasoning.
+Dataset-level claims retain their evidence references and `UNKNOWN` reason where
+applicable. A failed or partially completed job cannot overwrite or visually impersonate
+the last complete profile.
 
 The required details fixtures cover not started, queued, running, partial completion
 with unknowns, conflict, retryable failure, cancellation, superseded old revision,

@@ -56,6 +56,28 @@ class _Agent:
 
 
 class SemanticRuntimeTests(unittest.TestCase):
+    def test_reports_sampling_then_aggregation_without_agent_internals(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = ResourceStore(Path(directory) / "store")
+            record = _record("dataset_progress")
+            root = store.root / record.local_path
+            root.mkdir(parents=True)
+            (root / "README.md").write_text("dataset", encoding="utf-8")
+            store.save(record, {"version": 1})
+            events = []
+
+            build_semantic_profile(
+                store,
+                record.id,
+                config_path=Path(directory) / "missing-vlm.json",
+                agent_client=_Agent(),
+                progress_reporter=lambda phase, message: events.append((phase, message)),
+            )
+
+        self.assertEqual(events[0][0], "sampling")
+        self.assertIn("图片采样", events[0][1])
+        self.assertEqual(events[-1], ("aggregation", "正在聚合分析证据，生成最终分析结果"))
+
     def test_builds_cached_agent_profile_from_bounded_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = ResourceStore(Path(directory) / "store")

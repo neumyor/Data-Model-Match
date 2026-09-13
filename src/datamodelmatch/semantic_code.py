@@ -14,6 +14,7 @@ import os
 import re
 import resource
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -76,7 +77,11 @@ class DatasetCodeExecutor:
         if root.is_symlink() or not root.is_dir():
             raise DatasetCodeError("dataset snapshot must be a non-symbolic-link directory")
         self.root = root
-        self.python = python or os.environ.get("PYTHON") or "python3"
+        # Keep Agent-authored inspection in the same managed Python environment
+        # as the semantic service. Falling back to a system ``python3`` can omit
+        # declared readers such as pyarrow, which tempts the Agent to install
+        # packages during a constrained inspection.
+        self.python = python or os.environ.get("PYTHON") or sys.executable
 
     def run(self, code: object) -> CodeExecution:
         if not isinstance(code, str) or not code.strip() or len(code.encode("utf-8")) > _MAX_CODE_BYTES:

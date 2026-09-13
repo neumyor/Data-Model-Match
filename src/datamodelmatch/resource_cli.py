@@ -23,6 +23,12 @@ def _emit(event: str, data: Dict[str, Any]) -> None:
     print(json.dumps({"event": event, "data": data}, ensure_ascii=False), flush=True)
 
 
+def _semantic_progress(phase: str, message: str) -> None:
+    """Forward safe semantic-Agent progress to the browser event stream."""
+
+    _emit("semantic-progress", {"phase": phase, "message": message})
+
+
 def _forward_module_event(*args: object) -> None:
     """Normalize both supported internal emitter call styles to one JSONL event."""
     normalized = _normalize_module_event(*args)
@@ -180,6 +186,11 @@ def build_parser() -> argparse.ArgumentParser:
     task_profile.add_argument("text")
     task_match = subparsers.add_parser("dataset-task-match")
     task_match.add_argument("text")
+    task_match.add_argument(
+        "--stream",
+        action="store_true",
+        help="Emit product-safe task-discovery progress as NDJSON events.",
+    )
     return parser
 
 
@@ -227,7 +238,9 @@ def main(argv: List[str] | None = None) -> int:
         if args.command == "dataset-task-match":
             return _dataset_task_match(args, store)
     except Exception as exc:
-        if args.command in {"import", "reprofile", "compatibility", "transform-dataset"}:
+        if args.command in {"import", "reprofile", "compatibility", "transform-dataset"} or (
+            args.command == "dataset-task-match" and args.stream
+        ):
             _emit("error", {"code": _error_code(exc), "message": str(exc)})
             _emit("end", {"status": "failed"})
         else:
@@ -317,8 +330,13 @@ def _import(args: argparse.Namespace, store: ResourceStore) -> int:
             "status": "started",
             "message": "正在生成数据集语义分析",
         })
+        _semantic_progress("sampling", "Agent 正在准备图片采样与分析。")
         try:
-            semantic_profile = build_semantic_profile(store, pending_record.id)
+            semantic_profile = build_semantic_profile(
+                store,
+                pending_record.id,
+                progress_reporter=_semantic_progress,
+            )
         except Exception:
             if previous_record is not None and previous_profile is not None:
                 store.save(previous_record, previous_profile)
@@ -461,8 +479,15 @@ def _transform_dataset(args: argparse.Namespace, store: ResourceStore) -> int:
 def _semantic_profile(args: argparse.Namespace, store: ResourceStore) -> int:
     from .semantic_runtime import build_semantic_profile
 
-    profile = build_semantic_profile(store, args.resource_id, force=bool(args.force))
-    print(json.dumps({"profile": profile, "status": "completed"}, ensure_ascii=False))
+    _semantic_progress("sampling", "Agent 正在准备图片采样与分析。")
+    profile = build_semantic_profile(
+        store,
+        args.resource_id,
+        force=bool(args.force),
+        progress_reporter=_semantic_progress,
+    )
+    _emit("result", {"profile": profile, "status": "completed"})
+    _emit("end", {"status": "completed"})
     return 0
 
 
@@ -485,24 +510,94 @@ def _dataset_task_match(args: argparse.Namespace, store: ResourceStore) -> int:
     from .semantic_agent import SemanticAgentClient
     from .semantic_runtime import build_semantic_profile
 
+    streaming = bool(getattr(args, "stream", False))
+
+    def progress(
+        stage: str,
+        status: str,
+        message: str,
+        **extra: object,
+    ) -> None:
+        if streaming:
+            _emit(
+                "task-discovery-progress",
+                {"stage": stage, "status": status, "message": message, **extra},
+            )
+
     task = parse_task(args.text)
-    agent = SemanticAgentClient.from_config()
     profiles: List[Dict[str, Any]] = []
-    for record in store.list("dataset"):
-        if record.status == "failed":
-            continue
-        profile = build_semantic_profile(store, record.id, agent_client=agent)
+    datasets = [record for record in store.list("dataset") if record.status != "failed"]
+    agent = SemanticAgentClient.from_config() if datasets else None
+    progress(
+        "profiles",
+        "started",
+        f"正在收集 {len(datasets)} 个可用数据集的语义证据。",
+        totalCandidates=len(datasets),
+    )
+    for index, record in enumerate(datasets, start=1):
+        progress(
+            "profile",
+            "started",
+            f"正在准备数据集 {index}/{len(datasets)}：{record.name}。",
+            resourceId=record.id,
+            currentCandidate=index,
+            totalCandidates=len(datasets),
+        )
+
+        def profile_progress(
+            _phase: str,
+            message: str,
+            *,
+            resource_id: str = record.id,
+            current: int = index,
+        ) -> None:
+            progress(
+                "profile",
+                "progress",
+                message,
+                resourceId=resource_id,
+                currentCandidate=current,
+                totalCandidates=len(datasets),
+            )
+
+        profile = build_semantic_profile(
+            store,
+            record.id,
+            agent_client=agent,
+            progress_reporter=profile_progress,
+        )
         profile["name"] = record.name
         profiles.append(profile)
-    matches = match_task(task, profiles, agent)
+        progress(
+            "profile",
+            "completed",
+            f"数据集 {index}/{len(datasets)} 的语义证据已就绪。",
+            resourceId=record.id,
+            currentCandidate=index,
+            totalCandidates=len(datasets),
+        )
+    progress(
+        "profiles",
+        "completed",
+        f"已收集 {len(profiles)} 个数据集的语义证据。",
+        totalCandidates=len(profiles),
+    )
+    if not profiles:
+        progress("agent", "skipped", "当前没有可用于匹配的数据集。")
+        progress("validation", "skipped", "无需校验排序结果。")
+        matches: list[dict[str, object]] = []
+    else:
+        assert agent is not None
+        matches = match_task(task, profiles, agent, progress_reporter=progress)
     if matches:
         task["interpretation"] = matches[0]["taskInterpretation"]
-    print(
-        json.dumps(
-            {"task": task, "matches": matches},
-            ensure_ascii=False,
-        )
-    )
+    result = {"task": task, "matches": matches}
+    if streaming:
+        progress("complete", "completed", "数据集排序已完成。", totalCandidates=len(profiles))
+        _emit("result", result)
+        _emit("end", {"status": "completed"})
+    else:
+        print(json.dumps(result, ensure_ascii=False))
     return 0
 
 

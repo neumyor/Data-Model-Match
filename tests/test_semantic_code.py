@@ -8,6 +8,14 @@ from datamodelmatch.semantic_code import DatasetCodeExecutor
 
 
 class DatasetCodeExecutorTests(unittest.TestCase):
+    def test_defaults_to_the_semantic_service_interpreter(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "snapshot"
+            root.mkdir()
+            executor = DatasetCodeExecutor(root)
+
+        self.assertEqual(executor.python, sys.executable)
+
     def test_runs_agent_authored_code_and_validates_selected_images(self):
         code = """import json
 import os

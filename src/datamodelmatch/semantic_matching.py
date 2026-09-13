@@ -7,7 +7,7 @@ Agent, validates the returned decision, and keeps its reasoning inspectable.
 
 from __future__ import annotations
 
-from typing import Iterable, Mapping
+from typing import Callable, Iterable, Mapping
 
 from .semantic_agent import SemanticAgentClient, SemanticAgentError
 
@@ -21,6 +21,20 @@ _VERDICTS = frozenset(
 )
 _MAX_TEXT = 2_000
 _MAX_ITEMS = 12
+_MAX_MATCHES = 3
+TaskMatchProgressReporter = Callable[[str, str, str], None]
+
+
+def _report_progress(
+    reporter: TaskMatchProgressReporter | None,
+    stage: str,
+    status: str,
+    message: str,
+) -> None:
+    """Report product-safe milestones, never model prompts or reasoning."""
+
+    if reporter is not None:
+        reporter(stage, status, message)
 
 
 def parse_task(text: str) -> dict[str, object]:
@@ -41,8 +55,9 @@ def match_task(
     task: Mapping[str, object],
     profiles: Iterable[Mapping[str, object]],
     agent: SemanticAgentClient,
+    progress_reporter: TaskMatchProgressReporter | None = None,
 ) -> list[dict[str, object]]:
-    """Ask one Agent to interpret the task and rank all provided candidates."""
+    """Ask one Agent to rank all candidates and return only the top results."""
 
     if not isinstance(task, Mapping):
         raise TaskProfileError("任务档案必须是对象")
@@ -53,9 +68,17 @@ def match_task(
     candidates = [_candidate(profile) for profile in profiles]
     if not candidates:
         return []
+    result_limit = min(_MAX_MATCHES, len(candidates))
+    _report_progress(
+        progress_reporter,
+        "agent",
+        "started",
+        "Agent 正在根据任务目标、数据集能力、局限和已记录证据进行排序。",
+    )
     context = {
         "task": task_text,
         "candidates": candidates,
+        "maximumResults": result_limit,
         "requiredResponse": {
             "taskInterpretation": "string",
             "matches": [
@@ -71,8 +94,8 @@ def match_task(
             ],
         },
         "rules": [
-            "Return exactly one match for every candidate and no other resourceId.",
-            "Rank the matches from best to worst.",
+            f"Compare every provided candidate, then return exactly the best {result_limit} matches and no other resourceId.",
+            "Rank the returned matches from best to worst.",
             "Use semantic meaning, not literal keyword overlap.",
             "Do not invent facts. Cite only the supplied allowedEvidenceRefs.",
             "A lack of evidence must be represented as unknown or missingInformation.",
@@ -82,7 +105,37 @@ def match_task(
         raw = agent.match_task(context)
     except SemanticAgentError as exc:
         raise TaskProfileError("语义 Agent 未能完成任务匹配") from exc
-    return _validate_matches(raw, candidates)
+    _report_progress(
+        progress_reporter,
+        "validation",
+        "started",
+        "正在校验排序结果是否覆盖全部候选集，并核对引用证据。",
+    )
+    try:
+        matches = _validate_matches(raw, candidates, result_limit)
+    except TaskProfileError as validation_error:
+        repair = getattr(agent, "repair_task_match", None)
+        if not callable(repair):
+            raise
+        _report_progress(
+            progress_reporter,
+            "agent",
+            "retrying",
+            "首次排序结果未通过格式校验，Agent 正在依据候选与证据合同修正一次。",
+        )
+        try:
+            corrected = repair(context, str(validation_error))
+        except SemanticAgentError as exc:
+            raise TaskProfileError("语义 Agent 未能修正任务匹配结果") from exc
+        _report_progress(
+            progress_reporter,
+            "validation",
+            "retrying",
+            "正在校验修正后的排序结果与引用证据。",
+        )
+        matches = _validate_matches(corrected, candidates, result_limit)
+    _report_progress(progress_reporter, "validation", "completed", "排序结果与引用证据校验完成。")
+    return matches
 
 
 def _candidate(profile: Mapping[str, object]) -> dict[str, object]:
@@ -114,6 +167,7 @@ def _candidate(profile: Mapping[str, object]) -> dict[str, object]:
 def _validate_matches(
     raw: Mapping[str, object],
     candidates: list[dict[str, object]],
+    result_limit: int,
 ) -> list[dict[str, object]]:
     if not isinstance(raw, Mapping):
         raise TaskProfileError("语义 Agent 返回不是对象")
@@ -123,8 +177,8 @@ def _validate_matches(
     matches = raw.get("matches")
     if not isinstance(interpretation, str) or not interpretation.strip():
         raise TaskProfileError("语义 Agent 未提供任务理解")
-    if not isinstance(matches, list) or len(matches) != len(candidates):
-        raise TaskProfileError("语义 Agent 未返回完整候选集")
+    if not isinstance(matches, list) or len(matches) != result_limit:
+        raise TaskProfileError(f"语义 Agent 未返回前 {result_limit} 个候选集")
 
     candidate_by_id = {
         item["resourceId"]: item
